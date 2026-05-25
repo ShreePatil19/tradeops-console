@@ -1,7 +1,130 @@
 [
   {
     "id": "invoice-starter",
-    "description": "scaffold-only placeholder; real fixtures arrive in issue #38",
+    "description": "scaffold-only placeholder; scorer returns pass trivially for this id",
     "input": null
+  },
+  {
+    "id": "invoice-01",
+    "description": "Standard 3-line import invoice from Singapore supplier with GST-free items",
+    "input": [
+      {
+        "role": "user",
+        "content": "Please extract the line items from this invoice text:\n\nSingapore Trade Supplies Pte Ltd\n10 Tuas South Ave 2, Singapore 637205\nBill To: Pacific Rim Importers Pty Ltd, Sydney NSW 2000\nInvoice No: STS-2024-00891  Date: 15 Jan 2024\nIncoterm: FOB Singapore\n\nLine Items:\n1. Industrial Grade HDPE Pellets (HS 3901.20), 5000 kg @ USD 1.25/kg  USD 6,250.00\n2. Polymer Additive Masterbatch (HS 3812.39), 500 kg @ USD 4.80/kg  USD 2,400.00\n3. Packaging Material - PP Woven Bags (HS 6305.33), 200 units @ USD 0.85/unit  USD 170.00\n\nSubtotal: USD 8,820.00\nFreight (FOB waiver): USD 0.00\nTotal Amount Due: USD 8,820.00\nPayment Terms: 30 days net\nBank: DBS Bank, Account 0039-012345-01"
+      }
+    ],
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Industrial Grade HDPE Pellets",
+          "hsCode": "3901.20",
+          "quantity": 5000,
+          "unit": "kg",
+          "unitPrice": 1.25,
+          "currency": "USD",
+          "lineTotal": 6250.0
+        },
+        {
+          "description": "Polymer Additive Masterbatch",
+          "hsCode": "3812.39",
+          "quantity": 500,
+          "unit": "kg",
+          "unitPrice": 4.80,
+          "currency": "USD",
+          "lineTotal": 2400.0
+        },
+        {
+          "description": "Packaging Material - PP Woven Bags",
+          "hsCode": "6305.33",
+          "quantity": 200,
+          "unit": "units",
+          "unitPrice": 0.85,
+          "currency": "USD",
+          "lineTotal": 170.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-02",
+    "description": "Electronics invoice from Hong Kong supplier with 4 SKUs and AUD pricing",
+    "input": [
+      {
+        "role": "user",
+        "content": "Please extract the line items from this invoice text:\n\nHK Electronics Trading Co Ltd\n18F Tower B, Manulife Place, 348 Kwun Tong Road, Hong Kong\nInvoice To: Aussie Tech Wholesale Pty Ltd, Melbourne VIC 3000\nInvoice: HKE-2024-5501  Invoice Date: 03 Mar 2024\nIncoterm: CIF Sydney\n\nDescription                              Qty   Unit    Unit Price AUD   Total AUD\nLaptop Battery Pack 65Wh (HS 8507.60)    120   pcs         38.50         4,620.00\nUSB-C Charging Cable 2m (HS 8544.42)     500   pcs          3.20         1,600.00\nBluetooth Headset Model BH-200 (HS 8518.30)  80  pcs       22.75         1,820.00\nScreen Protector Tempered Glass (HS 7007.19) 300 pcs         2.10           630.00\n\nGoods Total:                                                              8,670.00\nCIF Freight + Insurance:                                                    420.00\nGrand Total:                                                              9,090.00\nCurrency: AUD\nPayment: 45 days from bill of lading date"
+      }
+    ],
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Laptop Battery Pack 65Wh",
+          "hsCode": "8507.60",
+          "quantity": 120,
+          "unit": "pcs",
+          "unitPrice": 38.50,
+          "currency": "AUD",
+          "lineTotal": 4620.0
+        },
+        {
+          "description": "USB-C Charging Cable 2m",
+          "hsCode": "8544.42",
+          "quantity": 500,
+          "unit": "pcs",
+          "unitPrice": 3.20,
+          "currency": "AUD",
+          "lineTotal": 1600.0
+        },
+        {
+          "description": "Bluetooth Headset Model BH-200",
+          "hsCode": "8518.30",
+          "quantity": 80,
+          "unit": "pcs",
+          "unitPrice": 22.75,
+          "currency": "AUD",
+          "lineTotal": 1820.0
+        },
+        {
+          "description": "Screen Protector Tempered Glass",
+          "hsCode": "7007.19",
+          "quantity": 300,
+          "unit": "pcs",
+          "unitPrice": 2.10,
+          "currency": "AUD",
+          "lineTotal": 630.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-03",
+    "description": "Textile invoice from Bangladesh supplier with 2 product lines and mixed units",
+    "input": [
+      {
+        "role": "user",
+        "content": "Please extract the line items from this invoice text:\n\nDhaka Garments Manufacturing Ltd\nEPZ Industrial Zone, Chittagong Export Processing Zone, Bangladesh\nConsignee: Southern Cross Apparel Pty Ltd, Brisbane QLD 4000\nCommercial Invoice No: DGM-CI-2024-0112  Date: 20 Feb 2024\nCountry of Origin: Bangladesh  Incoterm: FOB Chittagong\n\nItem 1: Men's Cotton T-Shirt (HS 6109.10.00)\n  Colour assortment: Navy/White/Grey\n  Total pieces: 2,400 pcs\n  FOB Unit Price: USD 3.85/pc\n  Line Amount: USD 9,240.00\n\nItem 2: Cotton Poplin Fabric (HS 5208.21)\n  Width: 150cm, Weight 120 g/m2\n  Total metres: 3,000 m\n  FOB Unit Price: USD 2.10/m\n  Line Amount: USD 6,300.00\n\nTotal Invoice Value: USD 15,540.00\nBank: Janata Bank, Branch: Agrabad, A/C: 0200000110\nPayment: LC at sight"
+      }
+    ],
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Men's Cotton T-Shirt",
+          "hsCode": "6109.10.00",
+          "quantity": 2400,
+          "unit": "pcs",
+          "unitPrice": 3.85,
+          "currency": "USD",
+          "lineTotal": 9240.0
+        },
+        {
+          "description": "Cotton Poplin Fabric",
+          "hsCode": "5208.21",
+          "quantity": 3000,
+          "unit": "m",
+          "unitPrice": 2.10,
+          "currency": "USD",
+          "lineTotal": 6300.0
+        }
+      ]
+    }
   }
 ]
