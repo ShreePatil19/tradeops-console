@@ -69,6 +69,11 @@ export default function Home() {
           <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
             TradeOps Console
           </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Trade ops desks lose hours per day to email triage, invoice entry,
+            sanctions checks, and customs lookups. This is what an AI version of
+            that desk looks like.
+          </p>
           <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Four AI agents for an Australian trade ops desk. They read supplier
             PDFs, route inbound email, run sanctions pre-checks, and answer
