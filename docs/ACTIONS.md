@@ -94,6 +94,12 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 - 42 v0.2 issues closed with completion notes citing the landing commits.
 - 23 orphaned issues from the failed first creation pass (broken bodies) closed as duplicates of the clean #24-#65 batch.
 - Tag `v0.2` pushed to origin.
+- First proper PR opened ([#66](https://github.com/ShreePatil19/tradeops-console/pull/66)) for the ACTIONS log itself, demonstrating the feature-branch flow. Squash-merged as commit `d9836f1`.
+
+### Phase 8 — v0.3 polish (in flight)
+
+- **OG image** ([PR #67](https://github.com/ShreePatil19/tradeops-console/pull/67)): `src/app/opengraph-image.tsx` using `next/og` `ImageResponse`, 1200x630 with TradeOps branding, agent pills, and the URL. `layout.tsx` metadata extended with `openGraph` block and `twitter.card: summary_large_image` so LinkedIn / Twitter previews render the large card.
+- **CI hygiene** ([PR #68 in flight](https://github.com/ShreePatil19/tradeops-console/tree/chore/ci-hygiene)): added `concurrency` block on both workflows (cancel in-flight on new push), `paths-ignore` on `ci.yml` for docs-only changes (saves runner minutes), and added a `test` job that runs `pnpm test` so the 75 unit tests are gated.
 
 ---
 
@@ -117,8 +123,6 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 | Agent-specific quota chip variants | Right now QuotaIndicator shows global budget. Could also show per-IP remaining today. |
 | `vercel env add` automation script | One command to add the key to all 3 envs from a local file. |
 | Hero GIF for README | Record a 10-second demo of Q&A streaming with citations. |
-| OG image for social shares | `app/opengraph-image.tsx` to render a nice card for LinkedIn / Twitter previews. |
-| GitHub Actions concurrency groups | Cancel in-flight CI on new push to same PR. |
 
 ---
 
