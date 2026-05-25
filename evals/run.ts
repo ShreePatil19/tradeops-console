@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { callAgent } from './client.js';
+import { buildMessagesFromCase, isFixtureCase } from './messages.js';
 import type { AgentSlug, EvalCase, Scorer, AgentSuite } from './types.js';
 
 const AGENT_SLUGS: AgentSlug[] = ['invoice', 'inbox', 'compliance', 'qa'];
@@ -126,10 +127,11 @@ async function runSuite(
   let passed = 0;
 
   for (const c of suite.cases) {
-    // The starter cases have null input; real cases supply UIMessage[].
-    // For scaffold-only starter cases we skip the live call.
+    // Starter cases skip the live call. A case counts as a real case if it
+    // has either an input array or a fixture field; both are routed through
+    // buildMessagesFromCase below.
     const isStarterPlaceholder =
-      c.id.endsWith('-starter') && c.input === null;
+      c.id.endsWith('-starter') && c.input === null && !isFixtureCase(c);
 
     let result;
     if (isStarterPlaceholder) {
@@ -137,7 +139,7 @@ async function runSuite(
       // without hitting the live API.
       result = { text: '', toolCalls: [], raw: null };
     } else {
-      const messages = Array.isArray(c.input) ? (c.input as unknown[]) : [];
+      const messages = buildMessagesFromCase(c);
       result = await callAgent(slug, messages, { baseUrl });
     }
 
