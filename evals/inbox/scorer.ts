@@ -19,6 +19,10 @@ import type { EvalCase, EvalResult } from '../types.js';
 const VALID_CATEGORIES = ['rfq', 'order', 'complaint', 'spam', 'info'] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
 
+function isValidCategory(value: string): value is Category {
+  return (VALID_CATEGORIES as readonly string[]).includes(value);
+}
+
 type InboxCase = EvalCase & {
   expected?: {
     category: Category;
@@ -80,6 +84,13 @@ export function scoreInbox(
     return {
       passed: false,
       reason: `classify_email tool call did not include a recognisable category field; input was: ${JSON.stringify(toolCall.input).slice(0, 200)}`,
+    };
+  }
+
+  if (!isValidCategory(observedCategory)) {
+    return {
+      passed: false,
+      reason: `observed category "${observedCategory}" is not in the allowed set [${VALID_CATEGORIES.join(', ')}]`,
     };
   }
 
