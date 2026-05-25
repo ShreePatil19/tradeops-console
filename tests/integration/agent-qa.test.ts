@@ -6,8 +6,6 @@ const {
   toolMock,
   convertToModelMessagesMock,
   stepCountIsMock,
-  createUIMessageStreamMock,
-  createUIMessageStreamResponseMock,
   requireApiKeyMock,
   bumpRateLimitMock,
   bumpGlobalBudgetMock,
@@ -18,21 +16,18 @@ const {
   hashInputMock,
   getCachedResponseMock,
   setCachedResponseMock,
+  buildCachedReplayMock,
 } = vi.hoisted(() => ({
   cacheEnabledRef: {
     invoice: false,
-    inbox: false,
-    compliance: false,
+    inbox: true,
+    compliance: true,
     qa: true,
   },
   streamTextMock: vi.fn(),
   toolMock: vi.fn((def: unknown) => def),
   convertToModelMessagesMock: vi.fn(async (m: unknown) => m),
   stepCountIsMock: vi.fn((n: number) => ({ __stop: n })),
-  createUIMessageStreamMock: vi.fn(() => "cached-stream-placeholder"),
-  createUIMessageStreamResponseMock: vi.fn(
-    () => new Response("cached-replay", { status: 200 })
-  ),
   requireApiKeyMock: vi.fn(),
   bumpRateLimitMock: vi.fn(async () => undefined),
   bumpGlobalBudgetMock: vi.fn(async () => undefined),
@@ -43,6 +38,12 @@ const {
   hashInputMock: vi.fn(async () => "fixed-hash"),
   getCachedResponseMock: vi.fn(async () => null as string | null),
   setCachedResponseMock: vi.fn(async () => undefined),
+  buildCachedReplayMock: vi.fn(({ trace_id }: { trace_id: string }) => {
+    const r = new Response("cached-replay", { status: 200 });
+    r.headers.set("X-Trace-Id", trace_id);
+    r.headers.set("X-Cache", "HIT");
+    return r;
+  }),
 }));
 
 vi.mock("ai", () => ({
@@ -50,8 +51,6 @@ vi.mock("ai", () => ({
   tool: toolMock,
   convertToModelMessages: convertToModelMessagesMock,
   stepCountIs: stepCountIsMock,
-  createUIMessageStream: createUIMessageStreamMock,
-  createUIMessageStreamResponse: createUIMessageStreamResponseMock,
 }));
 
 vi.mock("@/lib/model", () => ({
@@ -80,6 +79,7 @@ vi.mock("@/lib/cache", () => ({
   hashInput: hashInputMock,
   getCachedResponse: getCachedResponseMock,
   setCachedResponse: setCachedResponseMock,
+  buildCachedReplay: buildCachedReplayMock,
 }));
 
 import { POST } from "@/app/api/agents/qa/route";
@@ -141,10 +141,7 @@ describe("/api/agents/qa POST", () => {
     toolMock.mockClear();
     convertToModelMessagesMock.mockClear();
     stepCountIsMock.mockClear();
-    createUIMessageStreamMock.mockClear();
-    createUIMessageStreamResponseMock
-      .mockReset()
-      .mockImplementation(() => new Response("cached-replay", { status: 200 }));
+    buildCachedReplayMock.mockClear();
     requireApiKeyMock.mockReset();
     bumpRateLimitMock.mockReset().mockResolvedValue(undefined);
     bumpGlobalBudgetMock.mockReset().mockResolvedValue(undefined);

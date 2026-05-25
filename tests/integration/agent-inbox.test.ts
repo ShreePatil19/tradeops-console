@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const {
+  cacheEnabledRef,
   streamTextMock,
   toolMock,
   convertToModelMessagesMock,
@@ -10,7 +11,17 @@ const {
   bumpGlobalBudgetMock,
   logMock,
   logErrorMock,
+  hashInputMock,
+  getCachedResponseMock,
+  setCachedResponseMock,
+  buildCachedReplayMock,
 } = vi.hoisted(() => ({
+  cacheEnabledRef: {
+    invoice: false,
+    inbox: true,
+    compliance: true,
+    qa: true,
+  },
   streamTextMock: vi.fn(),
   toolMock: vi.fn((def: unknown) => def),
   convertToModelMessagesMock: vi.fn(async (m: unknown) => m),
@@ -20,6 +31,15 @@ const {
   bumpGlobalBudgetMock: vi.fn(async () => undefined),
   logMock: vi.fn(),
   logErrorMock: vi.fn(),
+  hashInputMock: vi.fn(async () => "fixed-hash"),
+  getCachedResponseMock: vi.fn(async () => null as string | null),
+  setCachedResponseMock: vi.fn(async () => undefined),
+  buildCachedReplayMock: vi.fn(({ trace_id }: { trace_id: string }) => {
+    const r = new Response("cached-replay", { status: 200 });
+    r.headers.set("X-Trace-Id", trace_id);
+    r.headers.set("X-Cache", "HIT");
+    return r;
+  }),
 }));
 
 vi.mock("ai", () => ({
@@ -45,6 +65,14 @@ vi.mock("@/lib/log", () => ({
   logError: logErrorMock,
 }));
 
+vi.mock("@/lib/cache", () => ({
+  CACHE_ENABLED: cacheEnabledRef,
+  hashInput: hashInputMock,
+  getCachedResponse: getCachedResponseMock,
+  setCachedResponse: setCachedResponseMock,
+  buildCachedReplay: buildCachedReplayMock,
+}));
+
 import { POST } from "@/app/api/agents/inbox/route";
 import { TRACE_HEADER } from "@/lib/trace";
 
@@ -54,7 +82,7 @@ type StreamTextArgs = {
   messages: unknown;
   maxOutputTokens: number;
   stopWhen: unknown;
-  onFinish: () => void;
+  onFinish: (event: { text: string }) => void;
   tools: Record<
     string,
     { execute: (input: unknown) => Promise<unknown> }
@@ -99,6 +127,7 @@ async function flushMicrotasks() {
 
 describe("/api/agents/inbox POST", () => {
   beforeEach(() => {
+    cacheEnabledRef.inbox = true;
     streamTextMock.mockReset().mockReturnValue(fakeStreamResult());
     toolMock.mockClear();
     convertToModelMessagesMock.mockClear();
@@ -108,6 +137,10 @@ describe("/api/agents/inbox POST", () => {
     bumpGlobalBudgetMock.mockReset().mockResolvedValue(undefined);
     logMock.mockReset();
     logErrorMock.mockReset();
+    hashInputMock.mockReset().mockResolvedValue("fixed-hash");
+    getCachedResponseMock.mockReset().mockResolvedValue(null);
+    setCachedResponseMock.mockReset().mockResolvedValue(undefined);
+    buildCachedReplayMock.mockClear();
   });
 
   it("returns 500 when requireApiKey throws", async () => {
@@ -194,7 +227,7 @@ describe("/api/agents/inbox POST", () => {
       })
     );
     const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
-    args.onFinish();
+    args.onFinish({ text: "" });
     await flushMicrotasks();
     expect(bumpRateLimitMock).toHaveBeenCalledWith("198.51.100.7", "inbox");
     expect(bumpGlobalBudgetMock).toHaveBeenCalledTimes(1);
@@ -203,5 +236,52 @@ describe("/api/agents/inbox POST", () => {
       .map((c) => c[0] as { event?: string; status?: number })
       .find((e) => e.event === "request_end");
     expect(endEvent?.status).toBe(200);
+  });
+
+  it("serves cached text as X-Cache: HIT when getCachedResponse returns a value", async () => {
+    getCachedResponseMock.mockResolvedValueOnce("rfq: send pricing within 24h");
+    const res = await POST(makeRequest(makeMessages("Hi, please quote 6 x 40' reefer ex Sydney")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("HIT");
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(getCachedResponseMock).toHaveBeenCalledWith("inbox", "fixed-hash");
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_hit");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("runs streamText on cache miss and sets X-Cache: MISS", async () => {
+    getCachedResponseMock.mockResolvedValueOnce(null);
+    const res = await POST(makeRequest(makeMessages("Triage this email")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("MISS");
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_miss");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("onFinish on cache miss persists the final text via setCachedResponse", async () => {
+    await POST(makeRequest(makeMessages("Triage this email")));
+    const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
+    args.onFinish({ text: "rfq: send pricing within 24h" });
+    await flushMicrotasks();
+    expect(setCachedResponseMock).toHaveBeenCalledWith(
+      "inbox",
+      "fixed-hash",
+      "rfq: send pricing within 24h"
+    );
+  });
+
+  it("skips the cache code path entirely when CACHE_ENABLED.inbox is false", async () => {
+    cacheEnabledRef.inbox = false;
+    const res = await POST(makeRequest(makeMessages("plain path")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBeNull();
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    expect(getCachedResponseMock).not.toHaveBeenCalled();
+    expect(hashInputMock).not.toHaveBeenCalled();
   });
 });

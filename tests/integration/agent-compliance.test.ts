@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const {
+  cacheEnabledRef,
   streamTextMock,
   toolMock,
   convertToModelMessagesMock,
@@ -11,7 +12,17 @@ const {
   logMock,
   logErrorMock,
   checkSanctionsMock,
+  hashInputMock,
+  getCachedResponseMock,
+  setCachedResponseMock,
+  buildCachedReplayMock,
 } = vi.hoisted(() => ({
+  cacheEnabledRef: {
+    invoice: false,
+    inbox: true,
+    compliance: true,
+    qa: true,
+  },
   streamTextMock: vi.fn(),
   toolMock: vi.fn((def: unknown) => def),
   convertToModelMessagesMock: vi.fn(async (m: unknown) => m),
@@ -22,6 +33,15 @@ const {
   logMock: vi.fn(),
   logErrorMock: vi.fn(),
   checkSanctionsMock: vi.fn(),
+  hashInputMock: vi.fn(async () => "fixed-hash"),
+  getCachedResponseMock: vi.fn(async () => null as string | null),
+  setCachedResponseMock: vi.fn(async () => undefined),
+  buildCachedReplayMock: vi.fn(({ trace_id }: { trace_id: string }) => {
+    const r = new Response("cached-replay", { status: 200 });
+    r.headers.set("X-Trace-Id", trace_id);
+    r.headers.set("X-Cache", "HIT");
+    return r;
+  }),
 }));
 
 vi.mock("ai", () => ({
@@ -51,6 +71,14 @@ vi.mock("@/lib/sanctions", () => ({
   checkSanctions: checkSanctionsMock,
 }));
 
+vi.mock("@/lib/cache", () => ({
+  CACHE_ENABLED: cacheEnabledRef,
+  hashInput: hashInputMock,
+  getCachedResponse: getCachedResponseMock,
+  setCachedResponse: setCachedResponseMock,
+  buildCachedReplay: buildCachedReplayMock,
+}));
+
 import { POST } from "@/app/api/agents/compliance/route";
 import { TRACE_HEADER } from "@/lib/trace";
 
@@ -60,7 +88,7 @@ type StreamTextArgs = {
   messages: unknown;
   maxOutputTokens: number;
   stopWhen: unknown;
-  onFinish: () => void;
+  onFinish: (event: { text: string }) => void;
   tools: Record<
     string,
     { execute: (input: unknown) => Promise<unknown> }
@@ -114,6 +142,7 @@ async function flushMicrotasks() {
 
 describe("/api/agents/compliance POST", () => {
   beforeEach(() => {
+    cacheEnabledRef.compliance = true;
     streamTextMock.mockReset().mockReturnValue(fakeStreamResult());
     toolMock.mockClear();
     convertToModelMessagesMock.mockClear();
@@ -124,6 +153,10 @@ describe("/api/agents/compliance POST", () => {
     logMock.mockReset();
     logErrorMock.mockReset();
     checkSanctionsMock.mockReset().mockReturnValue({ matched: false, entries: [] });
+    hashInputMock.mockReset().mockResolvedValue("fixed-hash");
+    getCachedResponseMock.mockReset().mockResolvedValue(null);
+    setCachedResponseMock.mockReset().mockResolvedValue(undefined);
+    buildCachedReplayMock.mockClear();
   });
 
   it("returns 500 when requireApiKey throws", async () => {
@@ -228,7 +261,7 @@ describe("/api/agents/compliance POST", () => {
       })
     );
     const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
-    args.onFinish();
+    args.onFinish({ text: "" });
     await flushMicrotasks();
     expect(bumpRateLimitMock).toHaveBeenCalledWith("192.0.2.42", "compliance");
     expect(bumpGlobalBudgetMock).toHaveBeenCalledTimes(1);
@@ -237,5 +270,52 @@ describe("/api/agents/compliance POST", () => {
       .map((c) => c[0] as { event?: string; status?: number })
       .find((e) => e.event === "request_end");
     expect(endEvent?.status).toBe(200);
+  });
+
+  it("serves cached text as X-Cache: HIT when getCachedResponse returns a value", async () => {
+    getCachedResponseMock.mockResolvedValueOnce("VERDICT: clear\nNo register match.");
+    const res = await POST(makeRequest(makeMessages("Acme Trading Pty Ltd")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("HIT");
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(getCachedResponseMock).toHaveBeenCalledWith("compliance", "fixed-hash");
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_hit");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("runs streamText on cache miss and sets X-Cache: MISS", async () => {
+    getCachedResponseMock.mockResolvedValueOnce(null);
+    const res = await POST(makeRequest(makeMessages("Sovcomflot PJSC")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("MISS");
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_miss");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("onFinish on cache miss persists the final text via setCachedResponse", async () => {
+    await POST(makeRequest(makeMessages("Sovcomflot PJSC")));
+    const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
+    args.onFinish({ text: "VERDICT: hit\nOFAC SDN match." });
+    await flushMicrotasks();
+    expect(setCachedResponseMock).toHaveBeenCalledWith(
+      "compliance",
+      "fixed-hash",
+      "VERDICT: hit\nOFAC SDN match."
+    );
+  });
+
+  it("skips the cache code path entirely when CACHE_ENABLED.compliance is false", async () => {
+    cacheEnabledRef.compliance = false;
+    const res = await POST(makeRequest(makeMessages("plain path")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBeNull();
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    expect(getCachedResponseMock).not.toHaveBeenCalled();
+    expect(hashInputMock).not.toHaveBeenCalled();
   });
 });

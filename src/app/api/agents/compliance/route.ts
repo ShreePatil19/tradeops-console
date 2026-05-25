@@ -6,6 +6,13 @@ import { checkSanctions } from "@/lib/sanctions";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
+import {
+  hashInput,
+  getCachedResponse,
+  setCachedResponse,
+  buildCachedReplay,
+  CACHE_ENABLED,
+} from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -44,15 +51,32 @@ export async function POST(req: Request) {
 
     log({ trace_id, agent: "compliance", event: "request_start", input_chars });
 
-    // TODO(#58): enable caching on compliance once a serialised replay format is ready.
+    // Text-only response cache. Replay drops tool-call cards by design;
+    // see CACHE_ENABLED in src/lib/cache.ts.
+    let inputHash: string | null = null;
+    if (CACHE_ENABLED.compliance) {
+      inputHash = await hashInput(messages);
+      const cached = await getCachedResponse("compliance", inputHash);
+      if (cached !== null) {
+        log({ trace_id, agent: "compliance", event: "cache_hit", input_chars });
+        return buildCachedReplay({ cachedText: cached, trace_id });
+      }
+      log({ trace_id, agent: "compliance", event: "cache_miss", input_chars });
+    }
+
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
       maxOutputTokens: MAX_OUTPUT_TOKENS.compliance,
       stopWhen: stepCountIs(3),
-      onFinish: () => {
+      onFinish: (event) => {
         log({ trace_id, agent: "compliance", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
+        if (inputHash !== null && event.text.length > 0) {
+          setCachedResponse("compliance", inputHash, event.text).catch(() => {
+            /* cache write failure is non-fatal */
+          });
+        }
         Promise.all([
           bumpRateLimit(ip, "compliance"),
           bumpGlobalBudget(),
@@ -92,6 +116,7 @@ export async function POST(req: Request) {
 
     const response = result.toUIMessageStreamResponse();
     response.headers.set(TRACE_HEADER, trace_id);
+    if (CACHE_ENABLED.compliance) response.headers.set("X-Cache", "MISS");
     return response;
   } catch (e) {
     logError(trace_id, "compliance", e);
