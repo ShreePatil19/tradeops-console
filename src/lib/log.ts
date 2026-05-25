@@ -91,7 +91,20 @@ function sanitize(entry: LogEntry): LogEntry {
 }
 
 export function log(entry: LogEntry): void {
-  console.log(JSON.stringify(sanitize(entry)));
+  const sanitized = sanitize(entry);
+  console.log(JSON.stringify(sanitized));
+  // Fire-and-forget shipping to the optional Axiom sink. Imported lazily
+  // so test files mocking @/lib/log do not need to mock @/lib/axiom too.
+  void shipLogToAxiom(sanitized);
+}
+
+async function shipLogToAxiom(entry: LogEntry): Promise<void> {
+  try {
+    const { shipToAxiom } = await import("@/lib/axiom");
+    await shipToAxiom(entry as Record<string, unknown>);
+  } catch {
+    // Lazy import or shipping failures must not affect the caller.
+  }
 }
 
 export function logError(
