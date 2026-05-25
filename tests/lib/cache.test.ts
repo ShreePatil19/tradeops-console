@@ -173,13 +173,10 @@ describe("setCachedResponse", () => {
 // CACHE_ENABLED flags
 // ---------------------------------------------------------------------------
 describe("CACHE_ENABLED", () => {
-  it("enables caching for qa, inbox, and compliance (text-only replay)", () => {
+  it("enables caching for every agent (qa/inbox/compliance text-only, invoice full-stream)", () => {
     expect(CACHE_ENABLED.qa).toBe(true);
     expect(CACHE_ENABLED.inbox).toBe(true);
     expect(CACHE_ENABLED.compliance).toBe(true);
-  });
-
-  it("leaves invoice caching off until a full stream serialiser exists", () => {
-    expect(CACHE_ENABLED.invoice).toBe(false);
+    expect(CACHE_ENABLED.invoice).toBe(true);
   });
 });

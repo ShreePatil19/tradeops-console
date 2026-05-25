@@ -5,16 +5,15 @@ import { TRACE_HEADER } from "@/lib/trace";
 
 // CACHE_ENABLED controls which agents participate in response caching.
 //
-// qa, inbox, and compliance are enabled. All three produce a short final
-// assistant text (verdict / one-line summary / cited answer) that carries
-// the primary user-visible payload. Replay is text-only -- tool-call cards
-// are not re-emitted on cache hits.
+// qa, inbox, and compliance use the text-only cache in this module
+// (cache:<agent>:<hash> keys, replay is the assistant text only).
 //
-// invoice stays off: its primary payload is the structured extract_line_items
-// tool call, and a text-only replay would drop that. A future PR can add a
-// full SSE serialiser when that trade-off matters.
+// invoice uses the full-stream cache in cache-stream.ts (cache-stream:<agent>:<hash>
+// keys, replay re-emits the extract_line_items tool-input and tool-output events
+// in addition to text). The toggle below still gates whether the route consults
+// either cache at all.
 export const CACHE_ENABLED = {
-  invoice: false,
+  invoice: true,
   inbox: true,
   compliance: true,
   qa: true,
