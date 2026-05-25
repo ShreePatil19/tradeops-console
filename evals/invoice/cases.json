@@ -126,5 +126,148 @@
         }
       ]
     }
+  },
+  {
+    "id": "invoice-04-pdf-clean",
+    "description": "PDF fixture: clean 3-line invoice from Singapore Trade Supplies",
+    "input": null,
+    "fixture": "01-clean.pdf",
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Industrial Grade HDPE Pellets",
+          "quantity": 5000,
+          "unit": "kg",
+          "unitPrice": 1.25,
+          "currency": "USD",
+          "lineTotal": 6250.0
+        },
+        {
+          "description": "Polymer Additive Masterbatch",
+          "quantity": 500,
+          "unit": "kg",
+          "unitPrice": 4.80,
+          "currency": "USD",
+          "lineTotal": 2400.0
+        },
+        {
+          "description": "PP Woven Bags",
+          "quantity": 200,
+          "unit": "units",
+          "unitPrice": 0.85,
+          "currency": "USD",
+          "lineTotal": 170.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-05-pdf-partial",
+    "description": "PDF fixture: partial invoice with missing invoice number, 2 line items",
+    "input": null,
+    "fixture": "02-partial.pdf",
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Industrial Grade HDPE Pellets",
+          "quantity": 5000,
+          "unit": "kg",
+          "unitPrice": 1.25,
+          "currency": "USD",
+          "lineTotal": 6250.0
+        },
+        {
+          "description": "Polymer Additive Masterbatch",
+          "quantity": 500,
+          "unit": "kg",
+          "unitPrice": 4.80,
+          "currency": "USD",
+          "lineTotal": 2400.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-06-pdf-stamped",
+    "description": "PDF fixture: clean invoice with a RECEIVED stamp overlay over the header",
+    "input": null,
+    "fixture": "03-stamped.pdf",
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Industrial Grade HDPE Pellets",
+          "quantity": 5000,
+          "unit": "kg",
+          "unitPrice": 1.25,
+          "currency": "USD",
+          "lineTotal": 6250.0
+        },
+        {
+          "description": "Polymer Additive Masterbatch",
+          "quantity": 500,
+          "unit": "kg",
+          "unitPrice": 4.80,
+          "currency": "USD",
+          "lineTotal": 2400.0
+        },
+        {
+          "description": "PP Woven Bags",
+          "quantity": 200,
+          "unit": "units",
+          "unitPrice": 0.85,
+          "currency": "USD",
+          "lineTotal": 170.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-07-pdf-handwritten",
+    "description": "PDF fixture: clean invoice with a handwritten short-by-1-pallet annotation",
+    "input": null,
+    "fixture": "04-handwritten.pdf",
+    "expected": {
+      "lineItems": [
+        {
+          "description": "Industrial Grade HDPE Pellets",
+          "quantity": 5000,
+          "unit": "kg",
+          "unitPrice": 1.25,
+          "currency": "USD",
+          "lineTotal": 6250.0
+        },
+        {
+          "description": "Polymer Additive Masterbatch",
+          "quantity": 500,
+          "unit": "kg",
+          "unitPrice": 4.80,
+          "currency": "USD",
+          "lineTotal": 2400.0
+        },
+        {
+          "description": "PP Woven Bags",
+          "quantity": 200,
+          "unit": "units",
+          "unitPrice": 0.85,
+          "currency": "USD",
+          "lineTotal": 170.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "invoice-08-pdf-multipage",
+    "description": "PDF fixture: 18 line items across 2 pages",
+    "input": null,
+    "fixture": "05-multipage.pdf",
+    "expected": {
+      "lineItems": [
+        { "description": "Container Item 01", "quantity": 10, "unit": "kg", "unitPrice": 1.0, "lineTotal": 10.0 },
+        { "description": "Container Item 05", "quantity": 50, "unit": "kg", "unitPrice": 2.0, "lineTotal": 100.0 },
+        { "description": "Container Item 10", "quantity": 100, "unit": "kg", "unitPrice": 3.25, "lineTotal": 325.0 },
+        { "description": "Container Item 14", "quantity": 140, "unit": "kg", "unitPrice": 4.25, "lineTotal": 595.0 },
+        { "description": "Container Item 18", "quantity": 180, "unit": "kg", "unitPrice": 5.25, "lineTotal": 945.0 }
+      ]
+    }
   }
 ]
