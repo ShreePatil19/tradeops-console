@@ -5,6 +5,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { X } from "lucide-react";
 
+import { Mail } from "lucide-react";
+
 import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
@@ -151,7 +153,13 @@ function InboxTriager() {
           messages={messages}
           status={status}
           error={error ?? undefined}
-          emptyState="Paste an email on the left to see the classification and drafted reply stream here."
+          emptyStateProps={{
+            icon: <Mail className="size-6" />,
+            title: "Waiting for an email",
+            description:
+              "Paste or load a sample email on the left. The classification, priority, and drafted reply will stream here.",
+            cta: "Load a sample RFQ, complaint, or spam message.",
+          }}
         />
       }
     />

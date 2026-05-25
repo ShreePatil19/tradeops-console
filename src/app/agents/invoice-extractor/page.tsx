@@ -5,6 +5,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { FileText, Upload, X } from "lucide-react";
 
+import { ReceiptText } from "lucide-react";
+
 import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
@@ -154,7 +156,13 @@ function InvoiceExtractor() {
           messages={messages}
           status={status}
           error={error ?? undefined}
-          emptyState="Upload a supplier PDF and the extracted line items will stream here."
+          emptyStateProps={{
+            icon: <ReceiptText className="size-6" />,
+            title: "Drop a supplier PDF",
+            description:
+              "Upload a supplier invoice PDF to extract line items, quantities, unit prices, and anomaly flags.",
+            cta: "Click the upload area on the left to get started.",
+          }}
         />
       }
     />

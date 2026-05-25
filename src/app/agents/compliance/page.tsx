@@ -5,6 +5,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { X } from "lucide-react";
 
+import { ShieldCheck } from "lucide-react";
+
 import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
@@ -127,7 +129,13 @@ function CompliancePreCheck() {
           messages={messages}
           status={status}
           error={error ?? undefined}
-          emptyState="Enter a counterparty name to see the screening result and verdict stream here."
+          emptyStateProps={{
+            icon: <ShieldCheck className="size-6" />,
+            title: "No counterparty screened yet",
+            description:
+              "Enter a counterparty name on the left to run a sanctions pre-check and see the verdict stream here.",
+            cta: "Try one of the sample names.",
+          }}
         />
       }
     />

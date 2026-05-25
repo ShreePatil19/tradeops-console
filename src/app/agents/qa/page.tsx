@@ -5,6 +5,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { X } from "lucide-react";
 
+import { BookOpen } from "lucide-react";
+
 import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
@@ -115,7 +117,13 @@ function TradeQA() {
           messages={messages}
           status={status}
           error={error ?? undefined}
-          emptyState="Ask a question on the left. The agent's reasoning and the matched corpus chunks will stream here."
+          emptyStateProps={{
+            icon: <BookOpen className="size-6" />,
+            title: "Ask a trade question",
+            description:
+              "Ask a question about Australian customs or ICC Incoterms 2020 to see streaming citations from the knowledge base.",
+            cta: "Try a sample question on the left.",
+          }}
         />
       }
     />
