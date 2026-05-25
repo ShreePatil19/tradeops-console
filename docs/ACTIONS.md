@@ -22,8 +22,8 @@ Running record of everything that has been done and everything queued to do. Upd
 | Open GitHub issues | 0 |
 | Open GitHub PRs | 0 |
 | Closed GitHub issues | 65 |
-| PRs merged in v0.3 polish phase | 10 (#66 to #73 plus the agent-routes smoke pass and the eval-scorer pass) |
-| Unit tests | 231 / 231 green across 23 test files |
+| PRs merged in v0.3 polish phase | 11 (#66 to #73 plus the agent-routes, eval-scorer, and env-sync passes) |
+| Unit tests | 246 / 246 green across 24 test files |
 
 ---
 
@@ -108,11 +108,12 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 - **Middleware + ToolCallCard tests** ([PR #72](https://github.com/ShreePatil19/tradeops-console/pull/72), merged as `cd6458a`): 13 integration tests for `src/middleware.ts`, 10 component tests for `ToolCallCard`. `vi.hoisted` pattern for mock fns referenced from `vi.mock` factories. Test count: 151.
 - **EmptyState + AgentShell + QA scorer tests** ([PR #73](https://github.com/ShreePatil19/tradeops-console/pull/73), merged as `1821d43`): 5 tests for `EmptyState`, 5 tests for `AgentShell` (with mocked `QuotaIndicator`), 7 tests for `scoreQa`. Test count: 168.
 - **Agent route smoke tests** ([PR #75](https://github.com/ShreePatil19/tradeops-console/pull/75), merged as `9940de9`): 33 new integration tests across `tests/integration/agent-{invoice,inbox,compliance,qa}.test.ts`. Mocked the `ai` package (`streamText`, `tool`, `convertToModelMessages`, `stepCountIs`, `createUIMessageStream`, `createUIMessageStreamResponse`) plus `@/lib/model`, `@/lib/rate-limit`, `@/lib/log`, `@/lib/guards`, `@/lib/cache`, and `@/lib/sanctions` so the tests never call Gemini. Each route verifies: 500 on missing API key, 200 streaming response with `X-Trace-Id`, inbound trace echo, `streamText` args (system prompt fragment, token cap, registered tool names), `request_start` log shape, each tool's `execute` return shape, and `onFinish` counter bumps. QA additionally covers `guardInput` blocking the request with 429 `injection_attempt`, cache-hit replay with `X-Cache: HIT` skipping `streamText`, cache-miss path with `X-Cache: MISS` persisting via `setCachedResponse`, citation-validator logging of unknown chunk IDs, and the `CACHE_ENABLED.qa = false` plain path. Test count: 201.
-- **Eval scorer tests**: 30 new unit tests across `tests/evals/{invoice,inbox,compliance}-scorer.test.ts`. Invoice (10 tests): starter pass, no-expected pass, missing tool call fail, full recall, alternative description fields (`name`), `items` array fallback, lineTotal >1% drift fail, lineTotal within 1% pass, exact-80% threshold pass, sub-80% fail with missing-item list. Inbox (9 tests): starter pass, no-expected pass, missing classify_email fail, missing-category-field fail, invalid-enum fail, exact match pass, mismatch fail, `classification` fallback field, uppercase-to-lowercase normalisation. Compliance (11 tests): starter pass, no-expected pass, hit detected, hit missed, hit with no VERDICT line, clear pass, clear inconclusive, clear false-positive, clear with no VERDICT line, lowercase `verdict:` parsing, `VERDICT: sanctioned` synonym. Test count: 231.
+- **Eval scorer tests** ([PR #76](https://github.com/ShreePatil19/tradeops-console/pull/76), merged as `8fd203c`): 30 new unit tests across `tests/evals/{invoice,inbox,compliance}-scorer.test.ts`. Invoice (10 tests): starter pass, no-expected pass, missing tool call fail, full recall, alternative description fields (`name`), `items` array fallback, lineTotal >1% drift fail, lineTotal within 1% pass, exact-80% threshold pass, sub-80% fail with missing-item list. Inbox (9 tests): starter pass, no-expected pass, missing classify_email fail, missing-category-field fail, invalid-enum fail, exact match pass, mismatch fail, `classification` fallback field, uppercase-to-lowercase normalisation. Compliance (11 tests): starter pass, no-expected pass, hit detected, hit missed, hit with no VERDICT line, clear pass, clear inconclusive, clear false-positive, clear with no VERDICT line, lowercase `verdict:` parsing, `VERDICT: sanctioned` synonym. Test count: 231.
+- **vercel env sync script**: `scripts/vercel-env-sync.ts` plus `pnpm env:sync` reads a local env file and pushes each KEY=VALUE to one or more of Vercel's three environments in a single call. Pure helpers `parseEnvFile` (comments, blanks, quote stripping, single equals semantics) and `buildCommandPlan` (key x env fan-out with env-name validation) covered by 15 new unit tests in `tests/scripts/vercel-env-sync.test.ts`. CLI flags: `--file=PATH`, `--env=development,preview,production`, `--dry-run`. Values are piped to `vercel env add NAME ENV` via stdin (never embedded in argv or a shell string). Reviewed by the security-reviewer subagent; switched the `child_process.spawn` call to no-shell mode on the recommendation. `scripts/README.md` documents the usage. Test count: 246.
 
 ### Phase 8 summary
 
-10 PRs auto-merged in sequence (`#66` through the eval-scorer pass), all via the feature-branch + push + CI + `gh pr merge --auto --squash` flow. Test count grew from 75 to 231 (+156). Zero PRs ever merged with a red check.
+11 PRs auto-merged in sequence (`#66` through the env-sync pass), all via the feature-branch + push + CI + `gh pr merge --auto --squash` flow. Test count grew from 75 to 246 (+171). Zero PRs ever merged with a red check.
 
 ---
 
@@ -134,7 +135,6 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 | Extend response cache to inbox/compliance/qa | Pattern is in `cache.ts` with `CACHE_ENABLED` flag per agent. Tool-call replay needs an SSE serialiser. |
 | Axiom or Logfire observability sink | Module is pluggable (see ADR-0004). Wire when traffic justifies dashboards. |
 | Agent-specific quota chip variants | Right now QuotaIndicator shows global budget. Could also show per-IP remaining today. |
-| `vercel env add` automation script | One command to add the key to all 3 envs from a local file. |
 | Hero GIF for README | Record a 10-second demo of Q&A streaming with citations. |
 
 ---
