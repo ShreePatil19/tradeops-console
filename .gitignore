@@ -44,3 +44,5 @@ next-env.d.ts
 plan.md
 about-me.md
 .scaffold-tmp/
+
+.vercel

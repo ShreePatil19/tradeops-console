@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, Inbox, ShieldCheck, Search } from "lucide-react";
+import { FileText, Inbox, ShieldCheck, Search, ArrowUpRight } from "lucide-react";
 
 import {
   Card,
@@ -23,81 +23,57 @@ function GithubMark({ className }: { className?: string }) {
   );
 }
 
-type AgentStatus = "live" | "in-progress" | "planned";
-
 type Agent = {
+  slug: string;
   name: string;
   blurb: string;
   icon: React.ComponentType<{ className?: string }>;
-  status: AgentStatus;
-  shipsOn: string;
 };
 
 const agents: Agent[] = [
   {
+    slug: "invoice-extractor",
     name: "Invoice Extractor",
     blurb:
       "Drop a supplier PDF. The vision model returns structured JSON line items with confidence scores.",
     icon: FileText,
-    status: "in-progress",
-    shipsOn: "Day 2",
   },
   {
+    slug: "inbox-triager",
     name: "Inbox Triager",
     blurb:
-      "Paste a trade-desk email. The agent classifies it (RFQ / order / complaint / spam / info) and drafts a reply.",
+      "Paste a trade-desk email. Get a category (RFQ, order, complaint, spam, info) and a drafted reply.",
     icon: Inbox,
-    status: "planned",
-    shipsOn: "Day 3",
   },
   {
+    slug: "compliance",
     name: "Compliance Pre-Check",
     blurb:
-      "Enter a counterparty name. Stubbed sanctions tool returns a verdict with cited reasoning.",
+      "Enter a counterparty name. Get a sanctions verdict with cited reasoning before you transact.",
     icon: ShieldCheck,
-    status: "planned",
-    shipsOn: "Day 4",
   },
   {
+    slug: "qa",
     name: "Trade Q&A",
     blurb:
-      "Ask a question about AU customs or Incoterms. Get an answer with inline citations to a small RAG corpus.",
+      "Ask about AU customs or Incoterms. Get an answer with inline citations to a small knowledge base.",
     icon: Search,
-    status: "planned",
-    shipsOn: "Day 5",
   },
 ];
-
-const statusLabel: Record<AgentStatus, string> = {
-  live: "Live",
-  "in-progress": "Shipping next",
-  planned: "Planned",
-};
-
-const statusClass: Record<AgentStatus, string> = {
-  live: "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300",
-  "in-progress":
-    "bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300",
-  planned: "bg-muted text-muted-foreground ring-border",
-};
 
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-12 px-6 py-16 sm:py-24">
-        <header className="flex flex-col gap-6">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-500/30 dark:text-amber-300">
-            <span className="size-1.5 rounded-full bg-amber-500" />
-            Day 1 of 7 · placeholder live
-          </span>
+        <header className="flex flex-col gap-5">
           <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
             TradeOps Console
           </h1>
           <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Four agents for a trade ops desk. They read supplier PDFs, route
-            inbound email, run a sanctions pre-check, and answer customs
-            questions with citations. Reasoning streams token by token; tool
-            calls render as cards as they happen.
+            Four AI agents for an Australian trade ops desk. They read supplier
+            PDFs, route inbound email, run sanctions pre-checks, and answer
+            customs questions with citations. Reasoning streams token by token;
+            tool calls render as cards as they happen.
           </p>
         </header>
 
@@ -108,39 +84,28 @@ export default function Home() {
           {agents.map((agent) => {
             const Icon = agent.icon;
             return (
-              <Card
-                key={agent.name}
-                className="h-full transition-shadow hover:shadow-md"
+              <Link
+                key={agent.slug}
+                href={`/agents/${agent.slug}`}
+                className="group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                      <Icon className="size-5" />
+                <Card className="h-full transition-all group-hover:shadow-md group-hover:ring-foreground/20">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                        <Icon className="size-5" />
+                      </div>
+                      <ArrowUpRight className="size-5 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
                     </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${statusClass[agent.status]}`}
-                    >
-                      {statusLabel[agent.status]} · {agent.shipsOn}
-                    </span>
-                  </div>
-                  <CardTitle className="mt-3 text-lg">{agent.name}</CardTitle>
-                  <CardDescription className="mt-1 leading-relaxed">
-                    {agent.blurb}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                    <CardTitle className="mt-3 text-lg">{agent.name}</CardTitle>
+                    <CardDescription className="mt-1 leading-relaxed">
+                      {agent.blurb}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
             );
           })}
-        </section>
-
-        <section className="rounded-xl border bg-muted/30 p-6 text-sm leading-relaxed text-muted-foreground">
-          <p className="font-medium text-foreground">Honesty contract</p>
-          <p className="mt-2">
-            This URL goes live before the agents do. Day 1 is the placeholder
-            you are looking at. Day 2 ships the Invoice Extractor end-to-end.
-            The rest land across days 3 to 5. Source is public, so you can
-            follow the work as it lands.
-          </p>
         </section>
       </main>
 
