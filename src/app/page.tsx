@@ -82,6 +82,121 @@ export default function Home() {
           </p>
         </header>
 
+        <section aria-label="How it works">
+          <h2 className="mb-6 font-heading text-xl font-semibold tracking-tight">
+            How it works
+          </h2>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-0">
+            {/* Step 1: Input */}
+            <div className="flex w-full flex-col items-center gap-3 rounded-xl bg-card px-5 py-5 text-center ring-1 ring-foreground/10 sm:w-56">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-5"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-card-foreground">Input</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Drop a file, paste an email, or type a question.
+              </p>
+            </div>
+
+            {/* Connector arrow 1 */}
+            <div className="flex h-8 items-center justify-center sm:h-auto sm:flex-1 sm:self-center">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-5 rotate-90 text-muted-foreground sm:rotate-0"
+                aria-hidden="true"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+
+            {/* Step 2: Tool calls */}
+            <div className="flex w-full flex-col items-center gap-3 rounded-xl bg-card px-5 py-5 text-center ring-1 ring-foreground/10 sm:w-56">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-5"
+                  aria-hidden="true"
+                >
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-card-foreground">Tool calls</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                The agent invokes typed tools: vision extraction, sanctions
+                lookup, RAG search, classification.
+              </p>
+            </div>
+
+            {/* Connector arrow 2 */}
+            <div className="flex h-8 items-center justify-center sm:h-auto sm:flex-1 sm:self-center">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-5 rotate-90 text-muted-foreground sm:rotate-0"
+                aria-hidden="true"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+
+            {/* Step 3: Answer with citations */}
+            <div className="flex w-full flex-col items-center gap-3 rounded-xl bg-card px-5 py-5 text-center ring-1 ring-foreground/10 sm:w-56">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-5"
+                  aria-hidden="true"
+                >
+                  <line x1="17" y1="10" x2="3" y2="10" />
+                  <line x1="21" y1="6" x2="3" y2="6" />
+                  <line x1="21" y1="14" x2="3" y2="14" />
+                  <line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-card-foreground">
+                Answer with citations
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Reasoning streams token by token. Tool calls and citations
+                render as cards.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section
           aria-label="Agents"
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
