@@ -3,15 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
-      - ".gitignore"
   pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
-      - ".gitignore"
+
+# Note: paths-ignore was removed in this PR. Branch protection on main now
+# requires Type check + Lint + Build + Unit tests to pass before merge, so
+# docs-only PRs need the workflow to actually run (otherwise the required
+# checks would never report and the merge would be blocked indefinitely).
+# Per-PR runner cost is small (under 2 minutes per job, cached pnpm store).
 
 # Cancel in-flight runs for the same ref when a new push lands.
 # Saves runner minutes and surfaces the latest result faster.
