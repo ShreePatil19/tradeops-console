@@ -3,13 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { BarChart2 } from "lucide-react";
 
+type AgentBudget = {
+  slug: string;
+  perIpUsed: number;
+  perIpCap: number;
+  perIpResetAt: number;
+};
+
 type BudgetData = {
   used: number;
   cap: number;
   resetAt: number;
+  agent?: AgentBudget;
 };
 
 type Status = "loading" | "ok" | "error";
+
+interface QuotaIndicatorProps {
+  agent?: string;
+}
 
 function formatLocalTime(epochMs: number): string {
   return new Date(epochMs).toLocaleTimeString(undefined, {
@@ -36,14 +48,17 @@ function getRingStyle(used: number, cap: number): string {
   return "bg-green-500/10";
 }
 
-export function QuotaIndicator() {
+export function QuotaIndicator({ agent }: QuotaIndicatorProps = {}) {
   const [status, setStatus] = useState<Status>("loading");
   const [data, setData] = useState<BudgetData | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchBudget() {
     try {
-      const res = await fetch("/api/budget");
+      const url = agent
+        ? `/api/budget?agent=${encodeURIComponent(agent)}`
+        : "/api/budget";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("non-ok");
       const json = (await res.json()) as BudgetData;
       setData(json);
@@ -91,7 +106,7 @@ export function QuotaIndicator() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [agent]);
 
   if (status === "loading") {
     return (
@@ -111,21 +126,44 @@ export function QuotaIndicator() {
     );
   }
 
-  const { used, cap, resetAt } = data;
-  const pillBorder = getPillStyle(used, cap);
-  const pillBg = getRingStyle(used, cap);
+  const { used, cap, resetAt, agent: agentBlock } = data;
+  const globalBorder = getPillStyle(used, cap);
+  const globalBg = getRingStyle(used, cap);
   const resetLabel = formatLocalTime(resetAt);
 
-  return (
+  const globalPill = (
     <span
+      data-quota-pill="global"
       title={`Resets at ${resetLabel}`}
       aria-label={`${used} of ${cap} requests used today. Resets at ${resetLabel}`}
-      className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${pillBorder} ${pillBg}`}
+      className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${globalBorder} ${globalBg}`}
     >
       <BarChart2 className="size-3.5 shrink-0" />
       <span>
         {used} / {cap} today
       </span>
     </span>
+  );
+
+  if (!agentBlock) return globalPill;
+
+  const agentBorder = getPillStyle(agentBlock.perIpUsed, agentBlock.perIpCap);
+  const agentBg = getRingStyle(agentBlock.perIpUsed, agentBlock.perIpCap);
+  const agentResetLabel = formatLocalTime(agentBlock.perIpResetAt * 1000);
+
+  return (
+    <div className="inline-flex items-center gap-2">
+      {globalPill}
+      <span
+        data-quota-pill="agent"
+        title={`Your ${agentBlock.slug} usage today. Resets at ${agentResetLabel}.`}
+        aria-label={`${agentBlock.perIpUsed} of ${agentBlock.perIpCap} ${agentBlock.slug} requests used today by your IP. Resets at ${agentResetLabel}.`}
+        className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${agentBorder} ${agentBg}`}
+      >
+        <span>
+          {agentBlock.perIpUsed} / {agentBlock.perIpCap} {agentBlock.slug}
+        </span>
+      </span>
+    </div>
   );
 }

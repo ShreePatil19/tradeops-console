@@ -74,6 +74,7 @@ function InvoiceExtractor() {
 
   return (
     <AgentShell
+      agent="invoice"
       title="Invoice Extractor"
       description="Drop a supplier PDF. The vision model reads each line item, returns structured JSON, and flags anything that looks off."
       input={

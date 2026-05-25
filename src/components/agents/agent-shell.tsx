@@ -10,9 +10,10 @@ type AgentShellProps = {
   description: string;
   input: ReactNode;
   output: ReactNode;
+  agent?: string;
 };
 
-export function AgentShell({ title, description, input, output }: AgentShellProps) {
+export function AgentShell({ title, description, input, output, agent }: AgentShellProps) {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b">
@@ -24,7 +25,7 @@ export function AgentShell({ title, description, input, output }: AgentShellProp
             <ArrowLeft className="size-4" />
             <span>TradeOps Console</span>
           </Link>
-          <QuotaIndicator />
+          <QuotaIndicator agent={agent} />
         </div>
       </header>
 
