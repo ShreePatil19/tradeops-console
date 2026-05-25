@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, tool, stepCountIs, type UIMessage } from "ai";
 import { z } from "zod";
 
-import { model, requireApiKey } from "@/lib/model";
+import { model, requireApiKey, MAX_OUTPUT_TOKENS } from "@/lib/model";
 import { corpus, type CorpusChunk } from "@/lib/corpus";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
@@ -82,6 +82,7 @@ export async function POST(req: Request) {
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
+      maxOutputTokens: MAX_OUTPUT_TOKENS.qa,
       stopWhen: stepCountIs(3),
       onFinish: (event) => {
         log({ trace_id, agent: "qa", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });

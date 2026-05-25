@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, tool, stepCountIs, type UIMessage } from "ai";
 import { z } from "zod";
 
-import { model, requireApiKey } from "@/lib/model";
+import { model, requireApiKey, MAX_OUTPUT_TOKENS } from "@/lib/model";
 import { checkSanctions } from "@/lib/sanctions";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
@@ -44,10 +44,12 @@ export async function POST(req: Request) {
 
     log({ trace_id, agent: "compliance", event: "request_start", input_chars });
 
+    // TODO(#58): enable caching on compliance once a serialised replay format is ready.
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
+      maxOutputTokens: MAX_OUTPUT_TOKENS.compliance,
       stopWhen: stepCountIs(3),
       onFinish: () => {
         log({ trace_id, agent: "compliance", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
