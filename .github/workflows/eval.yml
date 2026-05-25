@@ -37,18 +37,33 @@ jobs:
       GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
 
     steps:
+      - name: Check for API key secret
+        id: check_key
+        shell: bash
+        run: |
+          if [ -z "$GOOGLE_GENERATIVE_AI_API_KEY" ]; then
+            echo "::warning::GOOGLE_GENERATIVE_AI_API_KEY repo secret is not set; eval job will be skipped. Add it under Settings > Secrets and variables > Actions."
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.check_key.outputs.has_key == 'true'
 
       - uses: pnpm/action-setup@v4
+        if: steps.check_key.outputs.has_key == 'true'
         with:
           version: 11
 
       - uses: actions/setup-node@v4
+        if: steps.check_key.outputs.has_key == 'true'
         with:
           node-version: 24
           cache: pnpm
 
       - name: Cache pnpm store
+        if: steps.check_key.outputs.has_key == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.local/share/pnpm/store
@@ -57,16 +72,21 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
+        if: steps.check_key.outputs.has_key == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build Next.js app
+        if: steps.check_key.outputs.has_key == 'true'
         run: pnpm build
 
       - name: Start Next.js server in background
+        if: steps.check_key.outputs.has_key == 'true'
         run: pnpm start &
 
       - name: Wait for server to be ready (timeout 60s)
+        if: steps.check_key.outputs.has_key == 'true'
         run: npx wait-on http://localhost:3000 --timeout 60000
 
       - name: Run eval harness
+        if: steps.check_key.outputs.has_key == 'true'
         run: pnpm eval --base-url http://localhost:3000
