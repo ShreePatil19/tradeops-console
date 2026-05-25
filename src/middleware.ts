@@ -6,6 +6,7 @@ import {
 } from "@/lib/rate-limit";
 import { log } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
+import { INPUT_CAPS, type AgentSlug } from "@/lib/guards";
 
 export const config = {
   matcher: ["/api/agents/:path*"],
@@ -24,10 +25,33 @@ function getAgentSlug(pathname: string): string {
   return parts[2] ?? "unknown";
 }
 
+function isKnownAgent(slug: string): slug is AgentSlug {
+  return slug in INPUT_CAPS;
+}
+
 export async function middleware(req: NextRequest) {
   const ip = getClientIp(req);
   const agent = getAgentSlug(req.nextUrl.pathname);
   const trace_id = readTraceFromHeaders(req.headers);
+
+  // Content-Length check: enforce per-agent input size caps before hitting the
+  // rate limiter so oversized requests never consume a rate-limit slot.
+  if (req.method === "POST" && isKnownAgent(agent)) {
+    const contentLength = req.headers.get("content-length");
+    if (contentLength !== null) {
+      const gotBytes = Number(contentLength);
+      const { maxBytes } = INPUT_CAPS[agent];
+      if (!Number.isNaN(gotBytes) && gotBytes > maxBytes) {
+        log({ trace_id, agent: "middleware", event: "payload_too_large", status: 413, agentSlug: agent, maxBytes, gotBytes });
+        const res = NextResponse.json(
+          { error: "payload_too_large", maxBytes, gotBytes },
+          { status: 413 }
+        );
+        res.headers.set(TRACE_HEADER, trace_id);
+        return res;
+      }
+    }
+  }
 
   const ipState = await checkRateLimit(ip, agent);
   if (!ipState.ok) {

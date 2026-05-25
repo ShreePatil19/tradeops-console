@@ -41,6 +41,10 @@ function nextMidnightUtc(now: number) {
   return (Math.floor(now / 86400000) + 1) * 86400;
 }
 
+function penaltyKey(ip: string): string {
+  return `rl:ip:${ip}:penalty`;
+}
+
 export async function checkRateLimit(
   ip: string,
   agent: string,
@@ -49,13 +53,16 @@ export async function checkRateLimit(
   const k = keys(ip, agent, now);
   let minute = 0;
   let day = 0;
+  let penalised = false;
   try {
-    const [m, d] = await Promise.all([
+    const [m, d, p] = await Promise.all([
       kv.get<number>(k.minute),
       kv.get<number>(k.day),
+      kv.get<number>(penaltyKey(ip)),
     ]);
     minute = m ?? 0;
     day = d ?? 0;
+    penalised = (p ?? 0) > 0;
   } catch {
     return {
       ok: true,
@@ -69,6 +76,16 @@ export async function checkRateLimit(
     day: Math.max(0, LIMITS.IP_PER_DAY - day),
   };
   const reset = { minute: k.minuteResetAt, day: k.dayResetAt };
+  // A penalty key (set on injection detection) blocks the IP for its TTL.
+  if (penalised) {
+    return {
+      ok: false,
+      reason: "ip_minute",
+      remaining: { minute: 0, day: 0 },
+      retryAfter: 3600,
+      reset,
+    };
+  }
   if (minute >= LIMITS.IP_PER_MIN) {
     return {
       ok: false,
