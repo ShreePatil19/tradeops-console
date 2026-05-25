@@ -4,6 +4,8 @@ Four AI agents for a trade ops desk. Reasoning streams token by token; tool call
 
 Live: [tradeops-console.vercel.app](https://tradeops-console.vercel.app)
 
+![Trade Q&A streaming with a search_corpus tool card and inline citations](docs/media/hero.gif)
+
 ## Problem
 
 Trade ops desks lose hours per day to email triage, invoice entry, sanctions checks, and customs lookups. This is what an AI version of that desk looks like.
@@ -58,7 +60,13 @@ Open http://localhost:3000.
 
 ## Run evals
 
-Coming in v0.2 (see issue #25). Once landed: `pnpm eval`.
+```sh
+pnpm eval                                            # all agents, local API
+pnpm eval --agent invoice                            # one agent
+pnpm eval --base-url https://tradeops-console.vercel.app  # against production
+```
+
+Real PDF fixtures for the invoice agent are committed under `evals/invoice/fixtures/`. Regenerate them with `pnpm fixtures:invoice` (deterministic).
 
 ## Deploy
 
