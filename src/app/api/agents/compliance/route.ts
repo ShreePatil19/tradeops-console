@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, tool, stepCountIs, type UIMessage } from "ai";
 import { z } from "zod";
 
-import { model, requireApiKey } from "@/lib/anthropic";
+import { model, requireApiKey } from "@/lib/model";
 import { checkSanctions } from "@/lib/sanctions";
 
 export const runtime = "nodejs";
