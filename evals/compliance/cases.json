@@ -1,7 +1,207 @@
 [
   {
     "id": "compliance-starter",
-    "description": "scaffold-only placeholder; real fixtures arrive in issue #40",
+    "description": "scaffold-only placeholder; scorer returns pass trivially for this id",
     "input": null
+  },
+  {
+    "id": "compliance-hit-01",
+    "description": "Known sanctions hit: Sovcomflot PJSC (exact name from register)",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Sovcomflot PJSC\nCountry: Russia\nRole: Vessel operator / charterer\nTransaction: Time charter of tanker vessel for crude oil transport"
+      }
+    ],
+    "expected": {
+      "verdict": "hit",
+      "matchedEntity": "Sovcomflot PJSC"
+    }
+  },
+  {
+    "id": "compliance-hit-02",
+    "description": "Known sanctions hit: Wagner Group (alias PMC Wagner used in query)",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: PMC Wagner\nCountry: Russia\nRole: Security contractor\nTransaction: Provision of logistics support services"
+      }
+    ],
+    "expected": {
+      "verdict": "hit",
+      "matchedEntity": "Wagner Group"
+    }
+  },
+  {
+    "id": "compliance-hit-03",
+    "description": "Known sanctions hit: KOMID (exact alias from register)",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: KOMID\nCountry: North Korea (DPRK)\nRole: Technology supplier\nTransaction: Purchase of industrial equipment"
+      }
+    ],
+    "expected": {
+      "verdict": "hit",
+      "matchedEntity": "Korea Mining Development Trading Corporation"
+    }
+  },
+  {
+    "id": "compliance-hit-04",
+    "description": "Known sanctions hit: Hizballah (alternate spelling Hezbollah used)",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Hezbollah\nCountry: Lebanon\nRole: Charitable fund recipient\nTransaction: Donation transfer via correspondent bank"
+      }
+    ],
+    "expected": {
+      "verdict": "hit",
+      "matchedEntity": "Hizballah"
+    }
+  },
+  {
+    "id": "compliance-hit-05",
+    "description": "Known sanctions hit: Rosneft Trading SA (exact name from register)",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Rosneft Trading SA\nCountry: Switzerland (parent: Russia)\nRole: Commodity trader\nTransaction: Purchase of fuel oil cargo on CIF Rotterdam basis"
+      }
+    ],
+    "expected": {
+      "verdict": "hit",
+      "matchedEntity": "Rosneft Trading SA"
+    }
+  },
+  {
+    "id": "compliance-clear-01",
+    "description": "Clear: Pacific Logistics Co Ltd - synthetic freight forwarder",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Pacific Logistics Co Ltd\nCountry: Australia\nRole: Freight forwarder\nTransaction: Sea freight forwarding services for containerised goods"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-02",
+    "description": "Clear: ABC Trading Co Pty Ltd - synthetic general trader",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: ABC Trading Co Pty Ltd\nCountry: Australia\nRole: Commodity buyer\nTransaction: Purchase of agricultural produce on DAP Melbourne terms"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-03",
+    "description": "Clear: Global Freight Solutions Pte Ltd - synthetic Singapore forwarder",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Global Freight Solutions Pte Ltd\nCountry: Singapore\nRole: NVOCC operator\nTransaction: FCL container booking Singapore to Sydney"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-04",
+    "description": "Clear: Asia Shipping Pte Ltd - synthetic Singapore shipping agent",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Asia Shipping Pte Ltd\nCountry: Singapore\nRole: Shipping agent\nTransaction: Port agency services at Singapore for a bulk carrier"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-05",
+    "description": "Clear: Northshore Container Lines BV - synthetic Dutch feeder carrier",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Northshore Container Lines BV\nCountry: Netherlands\nRole: Container line operator\nTransaction: FCL shipment booking Rotterdam to Fremantle via transshipment"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-06",
+    "description": "Clear: Eastbridge Commodities Ltd - synthetic UK commodity broker",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Eastbridge Commodities Ltd\nCountry: United Kingdom\nRole: Commodity broker\nTransaction: Brokerage of wheat cargo FOB Black Sea for onward sale"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-07",
+    "description": "Clear: Meridian Trade Finance Corp - synthetic trade finance bank",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Meridian Trade Finance Corp\nCountry: Hong Kong SAR\nRole: Issuing bank for letter of credit\nTransaction: LC issuance for import of electronic components"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-08",
+    "description": "Clear: Southern Cross Terminals Pty Ltd - synthetic AU stevedore with distractor keyword 'cross'",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Southern Cross Terminals Pty Ltd\nCountry: Australia\nRole: Stevedore and terminal operator\nTransaction: Container handling and storage services at Port Botany"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-09",
+    "description": "Clear: Indopacific Bulk Carriers Ltd - synthetic bulk shipping company with distractor 'Indo'",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Indopacific Bulk Carriers Ltd\nCountry: Marshall Islands\nRole: Shipowner\nTransaction: Voyage charter for iron ore shipment from Port Hedland to China"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
+  },
+  {
+    "id": "compliance-clear-10",
+    "description": "Clear: Bluestone Mineral Resources Pty Ltd - synthetic AU mining company",
+    "input": [
+      {
+        "role": "user",
+        "content": "Run a sanctions check on the following counterparty:\n\nEntity name: Bluestone Mineral Resources Pty Ltd\nCountry: Australia\nRole: Mineral exporter\nTransaction: Sale of copper concentrate on FOB Port Adelaide basis to a Korean smelter"
+      }
+    ],
+    "expected": {
+      "verdict": "clear"
+    }
   }
 ]
