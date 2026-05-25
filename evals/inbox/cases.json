@@ -1,7 +1,137 @@
 [
   {
     "id": "inbox-starter",
-    "description": "scaffold-only placeholder; real fixtures arrive in issue #39",
+    "description": "scaffold-only placeholder; scorer returns pass trivially for this id",
     "input": null
+  },
+  {
+    "id": "inbox-rfq-01",
+    "description": "RFQ for industrial valves from a Malaysian buyer",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: procurement@kl-industrial.com.my\nTo: sales@tradeops-demo.com\nSubject: Request for Quotation - Industrial Gate Valves DN50-DN200\nDate: Mon, 22 Apr 2024 09:14:00 +0800\n\nDear Sales Team,\n\nWe are a Malaysian industrial contractor currently tendering for a water treatment plant project in Selangor. We require a quotation for the following gate valves to be delivered DAP Port Klang by 30 June 2024:\n\n- DN50 PN16 gate valve, carbon steel body, handwheel: 120 units\n- DN100 PN16 gate valve, carbon steel body, handwheel: 60 units\n- DN200 PN10 gate valve, ductile iron body, handwheel: 24 units\n\nPlease quote CIF and FOB options. We require ISO 9001 certification and test certificates for all valves.\n\nBest regards,\nAhmad Razif bin Yusof\nSenior Procurement Officer\nKL Industrial Engineering Sdn Bhd"
+      }
+    ],
+    "expected": {
+      "category": "rfq"
+    }
+  },
+  {
+    "id": "inbox-rfq-02",
+    "description": "RFQ for refrigerated container hire from a New Zealand importer",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: logistics@freshproduce.co.nz\nTo: charter@tradeops-demo.com\nSubject: Reefer Container Enquiry - Auckland to Brisbane Route\nDate: Tue, 23 Apr 2024 11:30:00 +1200\n\nHi,\n\nWe are looking to source 6 x 40ft reefer containers for a regular monthly shipment of chilled kiwifruit from Auckland to Brisbane. We need the containers to maintain -1 to +2 degrees Celsius throughout transit.\n\nCould you please provide:\n1. Monthly hire rates per container\n2. Availability from 1 June 2024\n3. Any applicable fuel surcharges or port fees\n\nWe would prefer a 6-month trial contract with renewal options.\n\nThanks,\nSarah Chen\nLogistics Coordinator\nFresh Produce NZ Ltd"
+      }
+    ],
+    "expected": {
+      "category": "rfq"
+    }
+  },
+  {
+    "id": "inbox-rfq-03",
+    "description": "RFQ for bulk urea fertiliser from an Indonesian agri-buyer",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: purchasing@agriindo.co.id\nTo: commodities@tradeops-demo.com\nSubject: Urea 46% Granular - Spot and Forward Quotation Required\nDate: Wed, 24 Apr 2024 08:05:00 +0700\n\nDear Sir/Madam,\n\nOur company is a fertiliser distributor operating across Java and Sumatra. We need competitive pricing for urea 46% granular in the following quantities:\n\nSpot (May 2024): 5,000 MT\nForward (July 2024): 10,000 MT\n\nDelivery required CIF Tanjung Priok, Jakarta. Please confirm minimum order quantity, credit terms available, and whether phytosanitary certificates are included.\n\nRegards,\nBudi Santoso\nPurchasing Manager\nAgrindo Makmur PT"
+      }
+    ],
+    "expected": {
+      "category": "rfq"
+    }
+  },
+  {
+    "id": "inbox-order-01",
+    "description": "Purchase order confirmation for stainless steel fittings",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: orders@ssteelfab.com.sg\nTo: operations@tradeops-demo.com\nSubject: Purchase Order PO-SG-2024-0487 - SS304 Pipe Fittings\nDate: Thu, 25 Apr 2024 10:20:00 +0800\n\nDear Operations Team,\n\nPlease find attached our official Purchase Order PO-SG-2024-0487 for the following items:\n\nLine 1: SS304 Elbow 90deg 2 inch - 200 units @ SGD 8.50 each\nLine 2: SS304 Tee 2 inch - 150 units @ SGD 11.20 each\nLine 3: SS304 Flange Blind 2 inch PN16 - 100 units @ SGD 14.80 each\n\nTotal PO Value: SGD 5,650.00\nRequired Delivery: 15 May 2024, EXW your warehouse\nPayment Terms: 30 days EOM\n\nPlease acknowledge receipt of this PO and confirm delivery schedule.\n\nKind regards,\nJennifer Lim\nProcurement Executive\nSS Steel Fabrications Pte Ltd"
+      }
+    ],
+    "expected": {
+      "category": "order"
+    }
+  },
+  {
+    "id": "inbox-order-02",
+    "description": "Order amendment increasing quantity for an existing shipment",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: ops@melbourneimports.com.au\nTo: sales@tradeops-demo.com\nSubject: Order Amendment - SO-2024-1102 - Qty Increase\nDate: Fri, 26 Apr 2024 14:45:00 +1000\n\nHi,\n\nFollowing our call this morning, please treat this email as our formal instruction to amend Sales Order SO-2024-1102 as follows:\n\nOriginal qty: 500 cartons of Jasmine Rice 5kg (SKU: JR-5KG-TH)\nAmended qty: 750 cartons of Jasmine Rice 5kg (SKU: JR-5KG-TH)\n\nThe additional 250 cartons should be included in the same shipment if space permits. We accept the revised invoice value of AUD 9,375.00.\n\nPlease confirm this amendment is captured before the vessel cut-off on 3 May 2024.\n\nThanks,\nDavid Papadopoulos\nOperations Manager\nMelbourne Imports Pty Ltd"
+      }
+    ],
+    "expected": {
+      "category": "order"
+    }
+  },
+  {
+    "id": "inbox-complaint-01",
+    "description": "Complaint about damaged goods received and request for credit note",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: quality@pacificwholesale.com.au\nTo: aftersales@tradeops-demo.com\nSubject: URGENT - Goods Damaged on Arrival - Invoice INV-2024-00723\nDate: Mon, 29 Apr 2024 09:00:00 +1000\n\nDear After Sales,\n\nWe received shipment against your invoice INV-2024-00723 on 26 April 2024. Upon inspection we found that 35 of the 200 cartons of ceramic floor tiles (reference: CFT-600x600-GREY) arrived with broken tiles, attributed to inadequate packing.\n\nThe total value of damaged goods is AUD 5,250.00 (35 cartons x AUD 150.00).\n\nWe attach photographic evidence and a damage survey report signed by our warehouse team. We request:\n1. A credit note for AUD 5,250.00 to be applied to our next invoice\n2. Replacement stock to be dispatched within 10 business days\n\nThis is unacceptable and we expect prompt resolution. If not resolved within 5 business days we will escalate to our legal team.\n\nRegards,\nMary Tran\nQuality Manager\nPacific Wholesale Pty Ltd"
+      }
+    ],
+    "expected": {
+      "category": "complaint"
+    }
+  },
+  {
+    "id": "inbox-complaint-02",
+    "description": "Complaint about delayed shipment and financial losses",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: ceo@nzimporters.co.nz\nTo: operations@tradeops-demo.com\nSubject: Formal Complaint - Delayed Delivery SO-NZ-2024-0055 - Financial Loss\nDate: Tue, 30 Apr 2024 11:10:00 +1200\n\nTo Whom It May Concern,\n\nI am writing to lodge a formal complaint regarding the delivery delay on Sales Order SO-NZ-2024-0055. The contracted delivery date was 15 April 2024. As of today, 30 April, the goods have still not arrived.\n\nThis delay has caused our company to miss a confirmed retail contract valued at NZD 28,000. We hold your company responsible for consequential losses as the delay is attributable to your freight booking error (see the attached email chain with your logistics team dated 10 April 2024).\n\nWe expect:\n- Immediate dispatch confirmation with tracking number\n- A written explanation of the cause of delay\n- Compensation proposal within 3 business days\n\nFailure to respond satisfactorily will result in formal legal proceedings.\n\nRobert MacAllister\nCEO\nNZ Importers Group Ltd"
+      }
+    ],
+    "expected": {
+      "category": "complaint"
+    }
+  },
+  {
+    "id": "inbox-spam-01",
+    "description": "Nigerian-prince style advance-fee fraud email with trade angle",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: dr.samuel.obi@tradehelp-ng.net\nTo: info@tradeops-demo.com\nSubject: STRICTLY CONFIDENTIAL - Urgent Business Partnership Required\nDate: Sat, 27 Apr 2024 02:33:00 +0100\n\nDear Friend,\n\nI am Dr Samuel Obi, Director-General of the Nigerian Ports Authority Trade Facilitation Bureau. I write to you in strict confidence regarding a sum of USD 47,500,000 (Forty Seven Million Five Hundred Thousand United States Dollars) currently trapped in a suspended export permit account.\n\nThe funds originate from an over-invoiced crude oil shipment to Rotterdam in 2019. I require a trustworthy foreign partner to help transfer these funds overseas in exchange for 35% commission.\n\nYour company name was provided to me by the Lagos Chamber of Commerce as a reputable trade house. For security reasons please reply only to my personal email dr.samuel.obi.private@gmail.com and do not share this message with your colleagues.\n\nGod bless you,\nDr Samuel Obi"
+      }
+    ],
+    "expected": {
+      "category": "spam"
+    }
+  },
+  {
+    "id": "inbox-spam-02",
+    "description": "Unsolicited marketing blast for freight rate comparison service",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: noreply@freightbargains-weekly.com\nTo: info@tradeops-demo.com\nSubject: [PROMO] Beat Your Current Freight Rates by Up to 40% - Free Quote Inside!\nDate: Sun, 28 Apr 2024 08:00:00 +0000\n\nHi there,\n\nAre you OVERPAYING for freight? Our AI-powered rate comparison engine has helped over 3,200 importers and exporters slash their logistics costs by an average of 31%.\n\nTHIS WEEK ONLY: Get a FREE freight audit and compare rates from 200+ carriers instantly!\n\nWHY CHOOSE FREIGHTBARGAINS?\n* No hidden fees * 24/7 support * Rated 4.9/5 by 1,400+ customers\n\n[CLAIM YOUR FREE AUDIT NOW] >> www.freightbargains-weekly.com/audit?ref=bulk_april2024\n\nUnsubscribe | Privacy Policy | FreightBargains Weekly, 123 Fake Street, Wilmington DE\n\nThis email was sent to info@tradeops-demo.com because you (or someone at your organisation) subscribed to our mailing list. If you believe this was in error, click unsubscribe above."
+      }
+    ],
+    "expected": {
+      "category": "spam"
+    }
+  },
+  {
+    "id": "inbox-info-01",
+    "description": "General inquiry asking about Incoterms and documentation requirements for AU import",
+    "input": [
+      {
+        "role": "user",
+        "content": "Classify and draft a reply for this email:\n\nFrom: manager@startuptrade.com.au\nTo: support@tradeops-demo.com\nSubject: Question about Incoterms and Import Docs for First Shipment from Vietnam\nDate: Mon, 29 Apr 2024 13:55:00 +1000\n\nHi Team,\n\nWe are a small business based in Melbourne and are about to receive our first overseas shipment - furniture components from a factory in Ho Chi Minh City. The supplier has quoted us CIF Melbourne but our freight forwarder mentioned we should ask about DAP instead.\n\nCould you help clarify:\n1. What is the difference between CIF and DAP for our situation?\n2. What import documents do we typically need to clear goods through Australian customs?\n3. Do we need to pay GST at the border if the shipment value is over AUD 1,000?\n\nWe are completely new to importing so any guidance would be appreciated.\n\nThanks,\nLiam Nguyen\nOperations Manager\nStartupTrade Pty Ltd"
+      }
+    ],
+    "expected": {
+      "category": "info"
+    }
   }
 ]
