@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { Loader2, MessageSquare, Copy, Check } from "lucide-react";
 import type { UIMessage } from "ai";
 
 import { ToolCallCard, type ToolCallPart } from "./tool-call-card";
@@ -10,6 +11,7 @@ type StreamOutputProps = {
   status: "submitted" | "streaming" | "ready" | "error";
   error?: Error;
   emptyState?: string;
+  traceId?: string;
 };
 
 function isToolPart(type: string): boolean {
@@ -21,7 +23,19 @@ export function StreamOutput({
   status,
   error,
   emptyState = "Submit input to start the agent.",
+  traceId,
 }: StreamOutputProps) {
+  const [copied, setCopied] = useState(false);
+
+  function copyTraceId() {
+    if (!traceId) return;
+    navigator.clipboard.writeText(traceId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      /* clipboard access denied; silently ignore */
+    });
+  }
   const assistantMessages = messages.filter((m) => m.role === "assistant");
 
   if (assistantMessages.length === 0 && status === "ready") {
@@ -84,7 +98,21 @@ export function StreamOutput({
       )}
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error.message}
+          <p>{error.message}</p>
+          {traceId && (
+            <div className="mt-2 flex items-center gap-2 font-mono text-xs text-destructive/70">
+              <span>trace: {traceId}</span>
+              <button
+                type="button"
+                onClick={copyTraceId}
+                className="inline-flex items-center gap-1 rounded border border-destructive/30 px-1.5 py-0.5 hover:bg-destructive/10"
+                aria-label="Copy trace ID"
+              >
+                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                <span>{copied ? "Copied" : "Copy trace ID"}</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
