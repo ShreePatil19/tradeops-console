@@ -1,7 +1,137 @@
 [
   {
     "id": "qa-starter",
-    "description": "scaffold-only placeholder; real fixtures arrive in issue #41",
+    "description": "scaffold-only placeholder; scorer returns pass trivially for this id",
     "input": null
+  },
+  {
+    "id": "qa-01",
+    "description": "Question about seller obligations under EXW",
+    "input": [
+      {
+        "role": "user",
+        "content": "Under the EXW Incoterm, what are the seller's obligations and why is it generally not recommended for international shipments?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["incoterms-exw"]
+    }
+  },
+  {
+    "id": "qa-02",
+    "description": "Question about FOB and why it may be unsuitable for containerised cargo",
+    "input": [
+      {
+        "role": "user",
+        "content": "Why is FOB considered unsuitable for containerised cargo and what alternative Incoterm is recommended instead?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["incoterms-fob", "incoterms-fca"]
+    }
+  },
+  {
+    "id": "qa-03",
+    "description": "Question about CIF insurance requirements under Incoterms 2020",
+    "input": [
+      {
+        "role": "user",
+        "content": "What insurance obligations does the seller have under CIF, and what minimum coverage level is required by Incoterms 2020?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["incoterms-cif"]
+    }
+  },
+  {
+    "id": "qa-04",
+    "description": "Question about who pays import duties under DDP vs DAP",
+    "input": [
+      {
+        "role": "user",
+        "content": "What is the key difference between DAP and DDP in terms of who pays import duties and clears customs at the destination country?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["incoterms-dap", "incoterms-ddp"]
+    }
+  },
+  {
+    "id": "qa-05",
+    "description": "Question about FCA on-board bill of lading notation",
+    "input": [
+      {
+        "role": "user",
+        "content": "What new feature was introduced for FCA in the 2020 Incoterms revision, and how does it help exporters using letters of credit?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["incoterms-fca"]
+    }
+  },
+  {
+    "id": "qa-06",
+    "description": "Question about Australian GST on imported goods above and below AUD 1,000",
+    "input": [
+      {
+        "role": "user",
+        "content": "How does Australian GST apply to imported goods? Is the treatment different for shipments valued above versus below AUD 1,000?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["au-import-gst"]
+    }
+  },
+  {
+    "id": "qa-07",
+    "description": "Question about how to apply for a Tariff Concession Order in Australia",
+    "input": [
+      {
+        "role": "user",
+        "content": "What is a Tariff Concession Order in Australia, who can apply for one, and what condition must be met for an importer to benefit from it?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["au-tariff-concession"]
+    }
+  },
+  {
+    "id": "qa-08",
+    "description": "Question about RCEP proof of origin for preferential tariff",
+    "input": [
+      {
+        "role": "user",
+        "content": "What proof of origin documents are accepted under RCEP for claiming preferential tariff treatment when importing into Australia?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["au-rcep"]
+    }
+  },
+  {
+    "id": "qa-09",
+    "description": "Question about anti-dumping duty and when it applies",
+    "input": [
+      {
+        "role": "user",
+        "content": "Under what conditions can an Australian importer be liable for anti-dumping duty, and where should they check whether any measures currently apply to their goods?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["au-anti-dumping"]
+    }
+  },
+  {
+    "id": "qa-10",
+    "description": "Cross-topic question combining GST on imports with RCEP tariff preference",
+    "input": [
+      {
+        "role": "user",
+        "content": "I am importing goods from a RCEP member country with a customs value of AUD 2,500. Can I claim a preferential tariff rate under RCEP, and will I still need to pay GST at the Australian border?"
+      }
+    ],
+    "expected": {
+      "chunkIds": ["au-rcep", "au-import-gst"]
+    }
   }
 ]
