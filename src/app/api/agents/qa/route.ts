@@ -1,4 +1,12 @@
-import { streamText, convertToModelMessages, tool, stepCountIs, type UIMessage } from "ai";
+import {
+  streamText,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  convertToModelMessages,
+  tool,
+  stepCountIs,
+  type UIMessage,
+} from "ai";
 import { z } from "zod";
 
 import { model, requireApiKey, MAX_OUTPUT_TOKENS } from "@/lib/model";
@@ -7,6 +15,12 @@ import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
 import { guardInput, validateCitations } from "@/lib/guards";
+import {
+  hashInput,
+  getCachedResponse,
+  setCachedResponse,
+  CACHE_ENABLED,
+} from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -78,6 +92,90 @@ export async function POST(req: Request) {
 
     log({ trace_id, agent: "qa", event: "request_start", input_chars });
 
+    // --- Cache check (qa only) -------------------------------------------
+    // Cache replay is text-only. Tool-call cards are not replayed. Full
+    // stream replay requires a serialised SSE format (deferred).
+    if (CACHE_ENABLED.qa) {
+      const inputHash = await hashInput(messages);
+      const cached = await getCachedResponse("qa", inputHash);
+      if (cached !== null) {
+        log({ trace_id, agent: "qa", event: "cache_hit", input_chars });
+        // Replay as a single-delta UI message stream so the client receives
+        // a Response in the same format as a normal streamText call.
+        const replayStream = createUIMessageStream({
+          execute({ writer }) {
+            const textId = "cached-text";
+            writer.write({ type: "start" });
+            writer.write({ type: "text-start", id: textId });
+            writer.write({ type: "text-delta", id: textId, delta: cached });
+            writer.write({ type: "text-end", id: textId });
+            writer.write({ type: "finish" });
+          },
+        });
+        const replayResponse = createUIMessageStreamResponse({ stream: replayStream });
+        replayResponse.headers.set(TRACE_HEADER, trace_id);
+        replayResponse.headers.set("X-Cache", "HIT");
+        return replayResponse;
+      }
+      // Cache miss -- run the model and persist the final text in onFinish.
+      log({ trace_id, agent: "qa", event: "cache_miss", input_chars });
+      const result = streamText({
+        model,
+        system: SYSTEM_PROMPT,
+        messages: await convertToModelMessages(messages),
+        maxOutputTokens: MAX_OUTPUT_TOKENS.qa,
+        stopWhen: stepCountIs(3),
+        onFinish: (event) => {
+          log({ trace_id, agent: "qa", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
+          const validIds = corpus.map((c) => c.id);
+          const { invalidIds } = validateCitations(event.text, validIds);
+          if (invalidIds.length > 0) {
+            log({ trace_id, agent: "qa", event: "invalid_citations", invalidIds });
+          }
+          // Persist the final assistant text so the next identical request is served from cache.
+          if (event.text.length > 0) {
+            setCachedResponse("qa", inputHash, event.text).catch(() => {
+              /* cache write failure is non-fatal */
+            });
+          }
+          Promise.all([bumpRateLimit(ip, "qa"), bumpGlobalBudget()]).catch(
+            () => {
+              /* counter loss is acceptable; never fail the user response */
+            }
+          );
+        },
+        tools: {
+          search_corpus: tool({
+            description:
+              "Search the in-repo trade knowledge base. Returns up to 4 matched chunks, each with id, title, source, and text.",
+            inputSchema: z.object({
+              query: z.string().describe("Concise search query derived from the user's question."),
+            }),
+            execute: async ({ query }) => {
+              log({ trace_id, agent: "qa", event: "tool_call", tool_name: "search_corpus" });
+              const hits = topK(query, 4);
+              return {
+                query,
+                matchCount: hits.length,
+                chunks: hits.map((h) => ({
+                  id: h.id,
+                  title: h.title,
+                  source: h.source,
+                  text: h.text,
+                  score: Number(h.score.toFixed(2)),
+                })),
+              };
+            },
+          }),
+        },
+      });
+      const response = result.toUIMessageStreamResponse();
+      response.headers.set(TRACE_HEADER, trace_id);
+      response.headers.set("X-Cache", "MISS");
+      return response;
+    }
+
+    // CACHE_ENABLED.qa is false: plain path with no cache logic.
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
