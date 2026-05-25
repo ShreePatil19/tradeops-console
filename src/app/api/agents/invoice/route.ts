@@ -2,6 +2,7 @@ import { streamText, convertToModelMessages, tool, stepCountIs, type UIMessage }
 import { z } from "zod";
 
 import { model, requireApiKey } from "@/lib/model";
+import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,12 +24,21 @@ export async function POST(req: Request) {
   try {
     requireApiKey();
     const { messages }: { messages: UIMessage[] } = await req.json();
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
 
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(3),
+      onFinish: () => {
+        Promise.all([bumpRateLimit(ip, "invoice"), bumpGlobalBudget()]).catch(
+          () => {
+            /* counter loss is acceptable; never fail the user response */
+          }
+        );
+      },
       tools: {
         extract_line_items: tool({
           description:
