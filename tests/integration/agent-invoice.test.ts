@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const {
+  cacheEnabledRef,
   streamTextMock,
   toolMock,
   convertToModelMessagesMock,
@@ -10,7 +11,17 @@ const {
   bumpGlobalBudgetMock,
   logMock,
   logErrorMock,
+  hashInputMock,
+  getCachedReplayMock,
+  setCachedReplayMock,
+  buildFullReplayResponseMock,
 } = vi.hoisted(() => ({
+  cacheEnabledRef: {
+    invoice: true,
+    inbox: true,
+    compliance: true,
+    qa: true,
+  },
   streamTextMock: vi.fn(),
   toolMock: vi.fn((def: unknown) => def),
   convertToModelMessagesMock: vi.fn(async (m: unknown) => m),
@@ -20,6 +31,15 @@ const {
   bumpGlobalBudgetMock: vi.fn(async () => undefined),
   logMock: vi.fn(),
   logErrorMock: vi.fn(),
+  hashInputMock: vi.fn(async () => "fixed-hash"),
+  getCachedReplayMock: vi.fn(async () => null as unknown),
+  setCachedReplayMock: vi.fn(async () => undefined),
+  buildFullReplayResponseMock: vi.fn(({ trace_id }: { trace_id: string }) => {
+    const r = new Response("cached-replay", { status: 200 });
+    r.headers.set("X-Trace-Id", trace_id);
+    r.headers.set("X-Cache", "HIT");
+    return r;
+  }),
 }));
 
 vi.mock("ai", () => ({
@@ -45,8 +65,25 @@ vi.mock("@/lib/log", () => ({
   logError: logErrorMock,
 }));
 
+vi.mock("@/lib/cache", () => ({
+  CACHE_ENABLED: cacheEnabledRef,
+  hashInput: hashInputMock,
+}));
+
+vi.mock("@/lib/cache-stream", () => ({
+  getCachedReplay: getCachedReplayMock,
+  setCachedReplay: setCachedReplayMock,
+  buildFullReplayResponse: buildFullReplayResponseMock,
+}));
+
 import { POST } from "@/app/api/agents/invoice/route";
 import { TRACE_HEADER } from "@/lib/trace";
+
+type StreamFinishEvent = {
+  text: string;
+  toolCalls: unknown[];
+  toolResults: unknown[];
+};
 
 type StreamTextArgs = {
   model: unknown;
@@ -54,7 +91,7 @@ type StreamTextArgs = {
   messages: unknown;
   maxOutputTokens: number;
   stopWhen: unknown;
-  onFinish: () => void;
+  onFinish: (event: StreamFinishEvent) => void;
   tools: Record<
     string,
     { execute: (input: unknown) => Promise<unknown> }
@@ -99,6 +136,7 @@ async function flushMicrotasks() {
 
 describe("/api/agents/invoice POST", () => {
   beforeEach(() => {
+    cacheEnabledRef.invoice = true;
     streamTextMock.mockReset().mockReturnValue(fakeStreamResult());
     toolMock.mockClear();
     convertToModelMessagesMock.mockClear();
@@ -108,6 +146,10 @@ describe("/api/agents/invoice POST", () => {
     bumpGlobalBudgetMock.mockReset().mockResolvedValue(undefined);
     logMock.mockReset();
     logErrorMock.mockReset();
+    hashInputMock.mockReset().mockResolvedValue("fixed-hash");
+    getCachedReplayMock.mockReset().mockResolvedValue(null);
+    setCachedReplayMock.mockReset().mockResolvedValue(undefined);
+    buildFullReplayResponseMock.mockClear();
   });
 
   it("returns 500 when requireApiKey throws", async () => {
@@ -194,7 +236,7 @@ describe("/api/agents/invoice POST", () => {
       })
     );
     const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
-    args.onFinish();
+    args.onFinish({ text: "", toolCalls: [], toolResults: [] });
     await flushMicrotasks();
     expect(bumpRateLimitMock).toHaveBeenCalledWith("203.0.113.10", "invoice");
     expect(bumpGlobalBudgetMock).toHaveBeenCalledTimes(1);
@@ -204,5 +246,90 @@ describe("/api/agents/invoice POST", () => {
       .find((e) => e.event === "request_end");
     expect(endEvent?.status).toBe(200);
     expect(typeof endEvent?.latency_ms).toBe("number");
+  });
+
+  it("serves a full-stream cached replay as X-Cache: HIT when getCachedReplay returns a value", async () => {
+    getCachedReplayMock.mockResolvedValueOnce({
+      text: "Extracted 2 line items.",
+      toolCalls: [
+        { toolCallId: "call_1", toolName: "extract_line_items", input: {} },
+      ],
+      toolResults: [{ toolCallId: "call_1", output: { captured: true } }],
+    });
+    const res = await POST(makeRequest(makeMessages("Acme Invoice PDF")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("HIT");
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(getCachedReplayMock).toHaveBeenCalledWith("invoice", "fixed-hash");
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_hit");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("runs streamText on cache miss and sets X-Cache: MISS", async () => {
+    getCachedReplayMock.mockResolvedValueOnce(null);
+    const res = await POST(makeRequest(makeMessages("Acme Invoice PDF")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBe("MISS");
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    const cacheEvents = logMock.mock.calls
+      .map((c) => c[0] as { event?: string })
+      .filter((e) => e.event === "cache_miss");
+    expect(cacheEvents).toHaveLength(1);
+  });
+
+  it("onFinish on cache miss persists the captured text + tool calls + tool results", async () => {
+    await POST(makeRequest(makeMessages("Acme Invoice PDF")));
+    const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
+    args.onFinish({
+      text: "Extracted the line items.",
+      toolCalls: [
+        {
+          toolCallId: "call_1",
+          toolName: "extract_line_items",
+          args: { lineItems: [{ description: "widget" }] },
+        },
+      ],
+      toolResults: [
+        { toolCallId: "call_1", result: { captured: true, lineCount: 1 } },
+      ],
+    });
+    await flushMicrotasks();
+    expect(setCachedReplayMock).toHaveBeenCalledTimes(1);
+    const firstCall = setCachedReplayMock.mock.calls[0] as unknown as [string, string, unknown];
+    expect(firstCall[0]).toBe("invoice");
+    expect(firstCall[1]).toBe("fixed-hash");
+    expect(firstCall[2]).toMatchObject({
+      text: "Extracted the line items.",
+      toolCalls: [
+        {
+          toolCallId: "call_1",
+          toolName: "extract_line_items",
+          input: { lineItems: [{ description: "widget" }] },
+        },
+      ],
+      toolResults: [
+        { toolCallId: "call_1", output: { captured: true, lineCount: 1 } },
+      ],
+    });
+  });
+
+  it("skips persistence when onFinish event has no text and no toolCalls", async () => {
+    await POST(makeRequest(makeMessages("Acme Invoice PDF")));
+    const args = streamTextMock.mock.calls[0]?.[0] as StreamTextArgs;
+    args.onFinish({ text: "", toolCalls: [], toolResults: [] });
+    await flushMicrotasks();
+    expect(setCachedReplayMock).not.toHaveBeenCalled();
+  });
+
+  it("skips the cache code path entirely when CACHE_ENABLED.invoice is false", async () => {
+    cacheEnabledRef.invoice = false;
+    const res = await POST(makeRequest(makeMessages("plain path")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Cache")).toBeNull();
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    expect(getCachedReplayMock).not.toHaveBeenCalled();
+    expect(hashInputMock).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,14 @@ import { model, requireApiKey, MAX_OUTPUT_TOKENS } from "@/lib/model";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
+import { hashInput, CACHE_ENABLED } from "@/lib/cache";
+import {
+  getCachedReplay,
+  setCachedReplay,
+  buildFullReplayResponse,
+  type CachedToolCall,
+  type CachedToolResult,
+} from "@/lib/cache-stream";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,6 +30,38 @@ Rules:
 - Numeric fields must be numbers, not strings. Use null if a value is genuinely missing rather than guessing.
 - Do not invent data. If you cannot read a row, omit it. Mention omissions in the anomalies note.`;
 
+type StreamFinishToolCall = {
+  toolCallId?: unknown;
+  toolName?: unknown;
+  args?: unknown;
+  input?: unknown;
+};
+
+type StreamFinishToolResult = {
+  toolCallId?: unknown;
+  result?: unknown;
+  output?: unknown;
+};
+
+function asString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function normaliseToolCall(tc: StreamFinishToolCall): CachedToolCall {
+  return {
+    toolCallId: asString(tc.toolCallId),
+    toolName: asString(tc.toolName),
+    input: tc.input !== undefined ? tc.input : tc.args,
+  };
+}
+
+function normaliseToolResult(tr: StreamFinishToolResult): CachedToolResult {
+  return {
+    toolCallId: asString(tr.toolCallId),
+    output: tr.output !== undefined ? tr.output : tr.result,
+  };
+}
+
 export async function POST(req: Request) {
   const trace_id = readTraceFromHeaders(req.headers);
   const startTime = Date.now();
@@ -38,15 +78,46 @@ export async function POST(req: Request) {
 
     log({ trace_id, agent: "invoice", event: "request_start", input_chars });
 
-    // TODO(#58): enable caching on invoice once a serialised replay format is ready.
+    // Full-stream replay cache. The structured extract_line_items tool call is
+    // the primary payload, so we use cache-stream (not text-only) to preserve
+    // the card on replay. See src/lib/cache-stream.ts and CACHE_ENABLED.invoice.
+    let inputHash: string | null = null;
+    if (CACHE_ENABLED.invoice) {
+      inputHash = await hashInput(messages);
+      const cached = await getCachedReplay("invoice", inputHash);
+      if (cached !== null) {
+        log({ trace_id, agent: "invoice", event: "cache_hit", input_chars });
+        return buildFullReplayResponse({ replay: cached, trace_id });
+      }
+      log({ trace_id, agent: "invoice", event: "cache_miss", input_chars });
+    }
+
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
       maxOutputTokens: MAX_OUTPUT_TOKENS.invoice,
       stopWhen: stepCountIs(3),
-      onFinish: () => {
+      onFinish: (event) => {
         log({ trace_id, agent: "invoice", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
+        if (inputHash !== null) {
+          const toolCalls = Array.isArray(event.toolCalls)
+            ? (event.toolCalls as unknown[]).map((tc) => normaliseToolCall(tc as StreamFinishToolCall))
+            : [];
+          const toolResults = Array.isArray(event.toolResults)
+            ? (event.toolResults as unknown[]).map((tr) => normaliseToolResult(tr as StreamFinishToolResult))
+            : [];
+          const text = typeof event.text === "string" ? event.text : "";
+          if (text.length > 0 || toolCalls.length > 0) {
+            setCachedReplay("invoice", inputHash, {
+              text,
+              toolCalls,
+              toolResults,
+            }).catch(() => {
+              /* cache write failure is non-fatal */
+            });
+          }
+        }
         Promise.all([bumpRateLimit(ip, "invoice"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */
@@ -104,6 +175,7 @@ export async function POST(req: Request) {
 
     const response = result.toUIMessageStreamResponse();
     response.headers.set(TRACE_HEADER, trace_id);
+    if (CACHE_ENABLED.invoice) response.headers.set("X-Cache", "MISS");
     return response;
   } catch (e) {
     logError(trace_id, "invoice", e);
