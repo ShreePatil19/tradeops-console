@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "eval": "tsx evals/run.ts",
-    "env:sync": "tsx scripts/vercel-env-sync.ts"
+    "env:sync": "tsx scripts/vercel-env-sync.ts",
+    "fixtures:invoice": "tsx evals/invoice/fixtures/build.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.79",
@@ -41,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
+    "pdf-lib": "^1.17.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
     "typescript": "^5",
