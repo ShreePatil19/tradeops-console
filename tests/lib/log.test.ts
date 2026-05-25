@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { redactString, log, type LogEntry } from "@/lib/log";
-import { createHash } from "node:crypto";
 
 // ---------------------------------------------------------------------------
-// Helper to predictably compute the expected hash prefix.
+// Mirror the djb2-style hash used internally by log.ts for IP pseudonymisation.
 // ---------------------------------------------------------------------------
 
 function hashIp(ip: string): string {
-  return createHash("sha256").update(ip).digest("hex").slice(0, 8);
+  let h = 5381;
+  for (let i = 0; i < ip.length; i++) {
+    h = ((h << 5) + h) ^ ip.charCodeAt(i);
+    h = h >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
 }
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import { FileText, Upload, X } from "lucide-react";
 import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
+import { INPUT_CAPS } from "@/lib/guards";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -21,6 +22,7 @@ function fileToDataUrl(file: File): Promise<string> {
 function InvoiceExtractor() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [fileSizeError, setFileSizeError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
@@ -31,6 +33,13 @@ function InvoiceExtractor() {
 
   async function handleSubmit() {
     if (!file || busy) return;
+    if (file.size > INPUT_CAPS.invoice.maxBytes) {
+      setFileSizeError(
+        `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed is ${INPUT_CAPS.invoice.maxBytes / 1024 / 1024} MB.`
+      );
+      return;
+    }
+    setFileSizeError(null);
     setSubmitting(true);
     try {
       const dataUrl = await fileToDataUrl(file);
@@ -56,6 +65,7 @@ function InvoiceExtractor() {
 
   function handleReset() {
     setFile(null);
+    setFileSizeError(null);
     if (inputRef.current) inputRef.current.value = "";
     setMessages([]);
   }
@@ -99,6 +109,12 @@ function InvoiceExtractor() {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
+
+          {fileSizeError && (
+            <p className="text-sm text-destructive" role="alert">
+              {fileSizeError}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button

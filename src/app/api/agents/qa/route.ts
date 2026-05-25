@@ -6,6 +6,7 @@ import { corpus, type CorpusChunk } from "@/lib/corpus";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
+import { guardInput, validateCitations } from "@/lib/guards";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -60,6 +61,21 @@ export async function POST(req: Request) {
       .filter((p) => p.type === "text")
       .reduce((sum, p) => sum + (p.type === "text" ? p.text.length : 0), 0);
 
+    // Injection guard: scan all user text parts before forwarding to the model.
+    const userText = messages
+      .flatMap((m) => m.parts)
+      .filter((p) => p.type === "text")
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("\n");
+
+    const guardResult = await guardInput(userText, ip, trace_id, "qa");
+    if (guardResult.blocked) {
+      return Response.json(
+        { error: "blocked", reason: "injection_attempt" },
+        { status: 429 }
+      );
+    }
+
     log({ trace_id, agent: "qa", event: "request_start", input_chars });
 
     const result = streamText({
@@ -67,8 +83,17 @@ export async function POST(req: Request) {
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(3),
-      onFinish: () => {
+      onFinish: (event) => {
         log({ trace_id, agent: "qa", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
+        // Citation validation: check that every [chunk-id] in the response
+        // matches an ID actually returned by the search_corpus tool.
+        // TODO: full stripping of invalid citations from output requires a
+        // buffered render mode; for now we log violations only.
+        const validIds = corpus.map((c) => c.id);
+        const { invalidIds } = validateCitations(event.text, validIds);
+        if (invalidIds.length > 0) {
+          log({ trace_id, agent: "qa", event: "invalid_citations", invalidIds });
+        }
         Promise.all([bumpRateLimit(ip, "qa"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */

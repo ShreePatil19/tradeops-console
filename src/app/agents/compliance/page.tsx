@@ -9,6 +9,7 @@ import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { INPUT_CAPS } from "@/lib/guards";
 
 const SAMPLES = [
   "Vantage Foods Pty Ltd",
@@ -66,6 +67,7 @@ function CompliancePreCheck() {
             disabled={busy}
             placeholder="e.g., Sovcomflot PJSC"
             className="h-10"
+            maxLength={INPUT_CAPS.compliance.maxBytes}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

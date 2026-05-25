@@ -9,6 +9,7 @@ import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { INPUT_CAPS } from "@/lib/guards";
 
 const SAMPLES: Record<string, string> = {
   rfq: `Subject: Pricing for 40HC reefer Sydney to Singapore
@@ -119,6 +120,7 @@ function InboxTriager() {
             disabled={busy}
             placeholder="Paste the full email here, including the subject line if available..."
             className="min-h-[260px]"
+            maxLength={INPUT_CAPS.inbox.maxBytes}
           />
           <div className="flex gap-2">
             <Button

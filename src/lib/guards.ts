@@ -1,8 +1,6 @@
-import { kv } from "@/lib/kv";
-import { log } from "@/lib/log";
-
 // ---------------------------------------------------------------------------
 // Input size caps (Issue #47)
+// Pure constants: safe to import in client components and server code alike.
 // ---------------------------------------------------------------------------
 
 export const INPUT_CAPS = {
@@ -30,6 +28,7 @@ export function checkInputSize(
 
 // ---------------------------------------------------------------------------
 // Prompt-injection detection (Issue #48)
+// Pure function: no I/O, safe to import anywhere.
 // ---------------------------------------------------------------------------
 
 export const INJECTION_PATTERNS: RegExp[] = [
@@ -51,11 +50,14 @@ export function detectInjection(text: string): { hit: boolean; pattern?: string 
 
 // ---------------------------------------------------------------------------
 // Route-level injection guard with KV penalty (Issue #48)
+// Server-only: imports kv and log. Do NOT import from client components.
 // ---------------------------------------------------------------------------
 
 const PENALTY_TTL_SECONDS = 3600;
 
 export async function applyInjectionPenalty(ip: string): Promise<void> {
+  // Dynamic import keeps kv/vercel-kv out of client bundles.
+  const { kv } = await import("@/lib/kv");
   const penaltyKey = `rl:ip:${ip}:penalty`;
   try {
     await kv.set(penaltyKey, 1);
@@ -74,6 +76,8 @@ export async function guardInput(
   const result = detectInjection(text);
   if (!result.hit) return { blocked: false };
 
+  // Dynamic import keeps log out of client bundles.
+  const { log } = await import("@/lib/log");
   log({
     trace_id,
     agent,
@@ -89,6 +93,7 @@ export async function guardInput(
 
 // ---------------------------------------------------------------------------
 // Citation validator (Issue #50)
+// Pure function: no I/O, safe to import anywhere.
 // ---------------------------------------------------------------------------
 
 const CITATION_RE = /\[([a-z0-9][a-z0-9_-]*)\]/gi;

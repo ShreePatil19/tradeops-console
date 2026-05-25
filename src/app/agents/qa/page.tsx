@@ -9,6 +9,7 @@ import { AgentShell } from "@/components/agents/agent-shell";
 import { StreamOutput } from "@/components/agents/stream-output";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { INPUT_CAPS } from "@/lib/guards";
 
 const SAMPLES = [
   "What's the difference between FOB and FCA for a container shipment?",
@@ -61,6 +62,7 @@ function TradeQA() {
             disabled={busy}
             placeholder="e.g., What's the difference between FOB and FCA for containers?"
             className="min-h-[120px]"
+            maxLength={INPUT_CAPS.qa.maxBytes}
           />
           <div className="flex flex-col gap-1.5 text-xs">
             <span className="text-muted-foreground">try one of these:</span>

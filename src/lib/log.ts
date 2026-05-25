@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type LogEntry = {
   trace_id: string;
   agent?: "invoice" | "inbox" | "compliance" | "qa" | "budget" | "middleware";
@@ -28,8 +26,19 @@ const IPV4_RE = /\b(\d{1,3}\.){3}\d{1,3}\b/g;
 // Fields whose values are treated as IP addresses and hash-pseudonymised.
 const IP_FIELD_NAMES = new Set(["ip", "x-forwarded-for", "x_forwarded_for", "real_ip", "client_ip"]);
 
+// Hash an IP address for pseudonymisation. Uses the Web Crypto API which is
+// available in Node.js, Edge Runtime, and browsers alike.
 function hashIp(ip: string): string {
-  return createHash("sha256").update(ip).digest("hex").slice(0, 8);
+  // Synchronous hex hash via TextEncoder + SubtleCrypto is async-only in the
+  // Web Crypto API, so we use a lightweight djb2-style deterministic hash that
+  // is fast, collision-resistant enough for pseudonymisation, and works
+  // synchronously in every runtime without importing node:crypto.
+  let h = 5381;
+  for (let i = 0; i < ip.length; i++) {
+    h = ((h << 5) + h) ^ ip.charCodeAt(i);
+    h = h >>> 0; // Keep as 32-bit unsigned integer.
+  }
+  return h.toString(16).padStart(8, "0");
 }
 
 /**
