@@ -20,6 +20,13 @@ on:
       - "src/lib/**"
   workflow_dispatch:
 
+# Cancel any in-flight eval run for the same PR when a new commit is pushed.
+# Eval runs hit the live Gemini API and can take a minute, so cancelling stale
+# runs both saves quota and surfaces the latest result faster.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   eval:
     name: Run eval harness
