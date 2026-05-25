@@ -17,11 +17,13 @@ Running record of everything that has been done and everything queued to do. Upd
 | 4 API agent routes | live, work locally with key |
 | Edge middleware (rate limit, budget, trace) | live, fail-open until Vercel KV provisioned |
 | Eval harness | scaffold + fixtures + CI workflow live, GitHub secret pending |
-| CI workflow (tsc, lint, build) | live, runs on every PR |
+| CI workflow (tsc, lint, build, test) | live, runs on every PR; auto-merge enabled on PRs that pass |
 | ADRs (5 decisions) | committed under `docs/adr/` |
 | Open GitHub issues | 0 |
+| Open GitHub PRs | 0 |
 | Closed GitHub issues | 65 |
-| Unit tests | 75 / 75 green |
+| PRs merged in v0.3 polish phase | 8 (#66 to #73) |
+| Unit tests | 168 / 168 green across 16 test files |
 
 ---
 
@@ -104,7 +106,11 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 - **Component + integration test layer** ([PR #70](https://github.com/ShreePatil19/tradeops-console/pull/70), merged as `e0dd961`): added `@testing-library/react` + `jsdom` to dev-deps, per-file `// @vitest-environment jsdom` directive for component tests. 7 new tests for `QuotaIndicator` (loading skeleton, success render, green/amber/red threshold styling, error dash, reset-time tooltip). 6 new integration tests for `/api/budget` (JSON shape, counter reflection, resetAt within 24h, trace-id echo). Test count: 109.
 - **Model + StreamOutput tests** ([PR #71](https://github.com/ShreePatil19/tradeops-console/pull/71), merged as `fdb9458`): 6 new tests for `src/lib/model.ts`, 13 new tests for `StreamOutput`. Test count: 128.
 - **Middleware + ToolCallCard tests** ([PR #72](https://github.com/ShreePatil19/tradeops-console/pull/72), merged as `cd6458a`): 13 integration tests for `src/middleware.ts`, 10 component tests for `ToolCallCard`. `vi.hoisted` pattern for mock fns referenced from `vi.mock` factories. Test count: 151.
-- **EmptyState + AgentShell + QA scorer tests** (in flight in [test/empty-state-shell-scorers](https://github.com/ShreePatil19/tradeops-console/tree/test/empty-state-shell-scorers)): 5 tests for `EmptyState` component (title, description, icon, cta visible-when-present, cta hidden-when-missing). 5 tests for `AgentShell` (h1 title, description, input/output slot rendering, back link to /, QuotaIndicator presence). 7 tests for `scoreQa` covering starter-case bypass, unknown chunk ID rejection, 100% recall pass, 80% recall edge pass, sub-80% recall fail, no-citation no-expected pass, regex-match invalid IDs caught. Test count: 168.
+- **EmptyState + AgentShell + QA scorer tests** ([PR #73](https://github.com/ShreePatil19/tradeops-console/pull/73), merged as `1821d43`): 5 tests for `EmptyState`, 5 tests for `AgentShell` (with mocked `QuotaIndicator`), 7 tests for `scoreQa`. Test count: 168.
+
+### Phase 8 summary
+
+8 PRs auto-merged in sequence today (`#66` through `#73`), all via the feature-branch + push + CI + `gh pr merge --auto --squash` flow. Test count grew from 75 to 168 (+93). Zero PRs ever merged with a red check.
 
 ---
 
@@ -122,6 +128,8 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 
 | Idea | Notes |
 |---|---|
+| Agent route smoke tests | `/api/agents/{invoice,inbox,compliance,qa}` need integration tests with mocked `streamText` from `ai` package. Biggest remaining test gap, ~30 tests. |
+| Remaining eval scorer tests | `evals/{invoice,inbox,compliance}/scorer.ts` follow the same shape as `qa-scorer.test.ts`, ~20 tests total. |
 | Real PDF fixtures for Invoice Extractor evals | Need 5 synthetic PDFs with handwritten / partial / stamped variants. Could generate via pdfkit or use public-domain samples. |
 | Extend response cache to inbox/compliance/qa | Pattern is in `cache.ts` with `CACHE_ENABLED` flag per agent. Tool-call replay needs an SSE serialiser. |
 | Axiom or Logfire observability sink | Module is pluggable (see ADR-0004). Wire when traffic justifies dashboards. |
