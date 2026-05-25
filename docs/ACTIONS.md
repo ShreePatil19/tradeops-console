@@ -22,8 +22,8 @@ Running record of everything that has been done and everything queued to do. Upd
 | Open GitHub issues | 0 |
 | Open GitHub PRs | 0 |
 | Closed GitHub issues | 65 |
-| PRs merged in v0.3 polish phase | 8 (#66 to #73) |
-| Unit tests | 168 / 168 green across 16 test files |
+| PRs merged in v0.3 polish phase | 9 (#66 to #73, plus the agent-routes smoke pass) |
+| Unit tests | 201 / 201 green across 20 test files |
 
 ---
 
@@ -107,10 +107,11 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 - **Model + StreamOutput tests** ([PR #71](https://github.com/ShreePatil19/tradeops-console/pull/71), merged as `fdb9458`): 6 new tests for `src/lib/model.ts`, 13 new tests for `StreamOutput`. Test count: 128.
 - **Middleware + ToolCallCard tests** ([PR #72](https://github.com/ShreePatil19/tradeops-console/pull/72), merged as `cd6458a`): 13 integration tests for `src/middleware.ts`, 10 component tests for `ToolCallCard`. `vi.hoisted` pattern for mock fns referenced from `vi.mock` factories. Test count: 151.
 - **EmptyState + AgentShell + QA scorer tests** ([PR #73](https://github.com/ShreePatil19/tradeops-console/pull/73), merged as `1821d43`): 5 tests for `EmptyState`, 5 tests for `AgentShell` (with mocked `QuotaIndicator`), 7 tests for `scoreQa`. Test count: 168.
+- **Agent route smoke tests**: 33 new integration tests across `tests/integration/agent-{invoice,inbox,compliance,qa}.test.ts`. Mocked the `ai` package (`streamText`, `tool`, `convertToModelMessages`, `stepCountIs`, `createUIMessageStream`, `createUIMessageStreamResponse`) plus `@/lib/model`, `@/lib/rate-limit`, `@/lib/log`, `@/lib/guards`, `@/lib/cache`, and `@/lib/sanctions` so the tests never call Gemini. Each route verifies: 500 on missing API key, 200 streaming response with `X-Trace-Id`, inbound trace echo, `streamText` args (system prompt fragment, token cap, registered tool names), `request_start` log shape, each tool's `execute` return shape, and `onFinish` counter bumps. QA additionally covers `guardInput` blocking the request with 429 `injection_attempt`, cache-hit replay with `X-Cache: HIT` skipping `streamText`, cache-miss path with `X-Cache: MISS` persisting via `setCachedResponse`, citation-validator logging of unknown chunk IDs, and the `CACHE_ENABLED.qa = false` plain path. Test count: 201.
 
 ### Phase 8 summary
 
-8 PRs auto-merged in sequence today (`#66` through `#73`), all via the feature-branch + push + CI + `gh pr merge --auto --squash` flow. Test count grew from 75 to 168 (+93). Zero PRs ever merged with a red check.
+9 PRs auto-merged in sequence (`#66` through the agent-routes smoke pass), all via the feature-branch + push + CI + `gh pr merge --auto --squash` flow. Test count grew from 75 to 201 (+126). Zero PRs ever merged with a red check.
 
 ---
 
@@ -128,7 +129,6 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 
 | Idea | Notes |
 |---|---|
-| Agent route smoke tests | `/api/agents/{invoice,inbox,compliance,qa}` need integration tests with mocked `streamText` from `ai` package. Biggest remaining test gap, ~30 tests. |
 | Remaining eval scorer tests | `evals/{invoice,inbox,compliance}/scorer.ts` follow the same shape as `qa-scorer.test.ts`, ~20 tests total. |
 | Real PDF fixtures for Invoice Extractor evals | Need 5 synthetic PDFs with handwritten / partial / stamped variants. Could generate via pdfkit or use public-domain samples. |
 | Extend response cache to inbox/compliance/qa | Pattern is in `cache.ts` with `CACHE_ENABLED` flag per agent. Tool-call replay needs an SSE serialiser. |
