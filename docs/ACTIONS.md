@@ -98,8 +98,9 @@ Subagent for the eval fixtures (commits `e17f405`, `059c8e7`, `b9f8995`, `c582ab
 
 ### Phase 8 — v0.3 polish (in flight)
 
-- **OG image** ([PR #67](https://github.com/ShreePatil19/tradeops-console/pull/67)): `src/app/opengraph-image.tsx` using `next/og` `ImageResponse`, 1200x630 with TradeOps branding, agent pills, and the URL. `layout.tsx` metadata extended with `openGraph` block and `twitter.card: summary_large_image` so LinkedIn / Twitter previews render the large card.
-- **CI hygiene** ([PR #68 in flight](https://github.com/ShreePatil19/tradeops-console/tree/chore/ci-hygiene)): added `concurrency` block on both workflows (cancel in-flight on new push), `paths-ignore` on `ci.yml` for docs-only changes (saves runner minutes), and added a `test` job that runs `pnpm test` so the 75 unit tests are gated.
+- **OG image** ([PR #67](https://github.com/ShreePatil19/tradeops-console/pull/67)): `src/app/opengraph-image.tsx` using `next/og` `ImageResponse`, 1200x630 with TradeOps branding, agent pills, and the URL. `layout.tsx` metadata extended with `openGraph` block and `twitter.card: summary_large_image` so LinkedIn / Twitter previews render the large card. Build registers the new `/opengraph-image` route.
+- **CI hygiene** ([PR #68](https://github.com/ShreePatil19/tradeops-console/pull/68), merged as `ca5330b`): `concurrency` block on both workflows (cancel in-flight on new push), `paths-ignore` on `ci.yml` for docs-only changes (saves runner minutes), and a `test` job that runs `pnpm test` so all unit tests are gated on every PR.
+- **Lint fix + test expansion** ([PR #69](https://github.com/ShreePatil19/tradeops-console/pull/69), merged as `96eb37d`): fixed `react-hooks/set-state-in-effect` in `QuotaIndicator`, two unused-var warnings in evals; added 21 new unit tests (`trace.test.ts`, `sanctions.test.ts`); added `eval.yml` secret-presence guard so the job skips gracefully when `GOOGLE_GENERATIVE_AI_API_KEY` is missing. Test count now 96.
 
 ---
 
