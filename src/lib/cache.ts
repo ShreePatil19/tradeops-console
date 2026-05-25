@@ -1,15 +1,22 @@
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+
 import { kv } from "@/lib/kv";
+import { TRACE_HEADER } from "@/lib/trace";
 
 // CACHE_ENABLED controls which agents participate in response caching.
-// Only qa is enabled for now -- it is the most cache-friendly agent
-// (deterministic-ish answers from a fixed corpus). Set to false here
-// and the qa route will skip all cache logic.
-// To extend to other agents, add their slug to the enabled set and
-// remove the TODO comment in their route.
+//
+// qa, inbox, and compliance are enabled. All three produce a short final
+// assistant text (verdict / one-line summary / cited answer) that carries
+// the primary user-visible payload. Replay is text-only -- tool-call cards
+// are not re-emitted on cache hits.
+//
+// invoice stays off: its primary payload is the structured extract_line_items
+// tool call, and a text-only replay would drop that. A future PR can add a
+// full SSE serialiser when that trade-off matters.
 export const CACHE_ENABLED = {
   invoice: false,
-  inbox: false,
-  compliance: false,
+  inbox: true,
+  compliance: true,
   qa: true,
 } as const;
 
@@ -78,6 +85,35 @@ export async function setCachedResponse(
   } catch {
     // Silent: a failed write just means the next identical request hits the model.
   }
+}
+
+/**
+ * Wrap a cached assistant text in a UI message stream response with the
+ * X-Cache: HIT and X-Trace-Id headers set. Used by every cache-enabled
+ * agent route on a cache hit.
+ *
+ * Replay is text-only: a single text-start / text-delta / text-end sequence.
+ * Tool-call cards are not replayed; see the CACHE_ENABLED comment for the
+ * rationale.
+ */
+export function buildCachedReplay(args: {
+  cachedText: string;
+  trace_id: string;
+}): Response {
+  const replayStream = createUIMessageStream({
+    execute({ writer }) {
+      const textId = "cached-text";
+      writer.write({ type: "start" });
+      writer.write({ type: "text-start", id: textId });
+      writer.write({ type: "text-delta", id: textId, delta: args.cachedText });
+      writer.write({ type: "text-end", id: textId });
+      writer.write({ type: "finish" });
+    },
+  });
+  const response = createUIMessageStreamResponse({ stream: replayStream });
+  response.headers.set(TRACE_HEADER, args.trace_id);
+  response.headers.set("X-Cache", "HIT");
+  return response;
 }
 
 // ---------------------------------------------------------------------------

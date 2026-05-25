@@ -5,6 +5,13 @@ import { model, requireApiKey, MAX_OUTPUT_TOKENS } from "@/lib/model";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
 import { log, logError } from "@/lib/log";
 import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
+import {
+  hashInput,
+  getCachedResponse,
+  setCachedResponse,
+  buildCachedReplay,
+  CACHE_ENABLED,
+} from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -49,15 +56,32 @@ export async function POST(req: Request) {
 
     log({ trace_id, agent: "inbox", event: "request_start", input_chars });
 
-    // TODO(#58): enable caching on inbox once a serialised replay format is ready.
+    // Text-only response cache. Replay drops tool-call cards by design;
+    // see CACHE_ENABLED in src/lib/cache.ts.
+    let inputHash: string | null = null;
+    if (CACHE_ENABLED.inbox) {
+      inputHash = await hashInput(messages);
+      const cached = await getCachedResponse("inbox", inputHash);
+      if (cached !== null) {
+        log({ trace_id, agent: "inbox", event: "cache_hit", input_chars });
+        return buildCachedReplay({ cachedText: cached, trace_id });
+      }
+      log({ trace_id, agent: "inbox", event: "cache_miss", input_chars });
+    }
+
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
       maxOutputTokens: MAX_OUTPUT_TOKENS.inbox,
       stopWhen: stepCountIs(4),
-      onFinish: () => {
+      onFinish: (event) => {
         log({ trace_id, agent: "inbox", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
+        if (inputHash !== null && event.text.length > 0) {
+          setCachedResponse("inbox", inputHash, event.text).catch(() => {
+            /* cache write failure is non-fatal */
+          });
+        }
         Promise.all([bumpRateLimit(ip, "inbox"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */
@@ -105,6 +129,7 @@ export async function POST(req: Request) {
 
     const response = result.toUIMessageStreamResponse();
     response.headers.set(TRACE_HEADER, trace_id);
+    if (CACHE_ENABLED.inbox) response.headers.set("X-Cache", "MISS");
     return response;
   } catch (e) {
     logError(trace_id, "inbox", e);
