@@ -78,6 +78,7 @@ function InboxTriager() {
 
   return (
     <AgentShell
+      agent="inbox"
       title="Inbox Triager"
       description="Paste an email. The agent classifies it (RFQ, order, complaint, spam, info), drafts a reply when appropriate, and gives the desk a one-line next action."
       input={

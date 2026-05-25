@@ -150,6 +150,23 @@ export async function bumpGlobalBudget(now = Date.now()): Promise<void> {
   }
 }
 
+// Read-only helper for the /api/budget chip: returns the current per-IP
+// per-agent count for today, falling back to 0 on KV unavailability. Does
+// not bump or expire; safe to call from the budget readout.
+export async function getIpDayCount(
+  ip: string,
+  agent: string,
+  now = Date.now()
+): Promise<number> {
+  const k = keys(ip, agent, now);
+  try {
+    const day = await kv.get<number>(k.day);
+    return day ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function formatHeaders(state: IpRateLimitState): Record<string, string> {
   const headers: Record<string, string> = {
     "X-RateLimit-Limit": String(LIMITS.IP_PER_MIN),

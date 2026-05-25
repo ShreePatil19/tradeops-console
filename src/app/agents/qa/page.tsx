@@ -50,6 +50,7 @@ function TradeQA() {
 
   return (
     <AgentShell
+      agent="qa"
       title="Trade Q&A"
       description="Ask a question about Australian customs or ICC Incoterms 2020. The agent searches a small in-repo knowledge base and answers with inline citations to the chunk IDs it used."
       input={

@@ -55,6 +55,7 @@ function CompliancePreCheck() {
 
   return (
     <AgentShell
+      agent="compliance"
       title="Compliance Pre-Check"
       description="Enter a counterparty name. The agent searches a stub sanctions register, then returns a verdict (clear, hit, or inconclusive) with cited reasoning."
       input={
