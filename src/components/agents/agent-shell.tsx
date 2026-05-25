@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 
 import type { ReactNode } from "react";
 
+import { QuotaIndicator } from "./quota-indicator";
+
 type AgentShellProps = {
   title: string;
   description: string;
@@ -22,6 +24,7 @@ export function AgentShell({ title, description, input, output }: AgentShellProp
             <ArrowLeft className="size-4" />
             <span>TradeOps Console</span>
           </Link>
+          <QuotaIndicator />
         </div>
       </header>
 
