@@ -1,0 +1,65 @@
+# Eval CI workflow for TradeOps Console
+#
+# IMPORTANT: This workflow requires a GOOGLE_GENERATIVE_AI_API_KEY repo secret.
+# Use a separate test key with its own daily quota budget so eval runs do not
+# exhaust the production key. Go to:
+#   Settings > Secrets and variables > Actions > New repository secret
+# and add: GOOGLE_GENERATIVE_AI_API_KEY = <your-test-key>
+#
+# Trigger conditions:
+#   - Pull requests that touch eval fixtures, agent route handlers, or shared lib
+#   - Manual dispatch via the Actions tab (workflow_dispatch)
+
+name: Eval
+
+on:
+  pull_request:
+    paths:
+      - "evals/**"
+      - "src/app/api/agents/**"
+      - "src/lib/**"
+  workflow_dispatch:
+
+jobs:
+  eval:
+    name: Run eval harness
+    runs-on: ubuntu-latest
+
+    env:
+      # Expose the repo secret under the name the AI SDK env var expects.
+      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js app
+        run: pnpm build
+
+      - name: Start Next.js server in background
+        run: pnpm start &
+
+      - name: Wait for server to be ready (timeout 60s)
+        run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run eval harness
+        run: pnpm eval --base-url http://localhost:3000
