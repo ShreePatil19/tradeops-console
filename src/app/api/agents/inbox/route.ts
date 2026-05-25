@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { model, requireApiKey } from "@/lib/model";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
+import { log, logError } from "@/lib/log";
+import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,11 +34,20 @@ Drafts must:
 - Sign off as "TradeOps Desk".`;
 
 export async function POST(req: Request) {
+  const trace_id = readTraceFromHeaders(req.headers);
+  const startTime = Date.now();
   try {
     requireApiKey();
     const { messages }: { messages: UIMessage[] } = await req.json();
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
+
+    const input_chars = messages
+      .flatMap((m) => m.parts)
+      .filter((p) => p.type === "text")
+      .reduce((sum, p) => sum + (p.type === "text" ? p.text.length : 0), 0);
+
+    log({ trace_id, agent: "inbox", event: "request_start", input_chars });
 
     const result = streamText({
       model,
@@ -44,6 +55,7 @@ export async function POST(req: Request) {
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(4),
       onFinish: () => {
+        log({ trace_id, agent: "inbox", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
         Promise.all([bumpRateLimit(ip, "inbox"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */
@@ -58,11 +70,14 @@ export async function POST(req: Request) {
             confidence: z.number().min(0).max(1),
             reasoning: z.string().describe("One sentence explaining the choice."),
           }),
-          execute: async (input) => ({
-            recorded: true,
-            category: input.category,
-            confidence: input.confidence,
-          }),
+          execute: async (input) => {
+            log({ trace_id, agent: "inbox", event: "tool_call", tool_name: "classify_email" });
+            return {
+              recorded: true,
+              category: input.category,
+              confidence: input.confidence,
+            };
+          },
         }),
         draft_reply: tool({
           description:
@@ -74,17 +89,23 @@ export async function POST(req: Request) {
               .string()
               .describe("The concrete next step the desk should take (1 sentence)."),
           }),
-          execute: async (input) => ({
-            drafted: true,
-            subject: input.subject,
-            wordCount: input.body.split(/\s+/).filter(Boolean).length,
-          }),
+          execute: async (input) => {
+            log({ trace_id, agent: "inbox", event: "tool_call", tool_name: "draft_reply" });
+            return {
+              drafted: true,
+              subject: input.subject,
+              wordCount: input.body.split(/\s+/).filter(Boolean).length,
+            };
+          },
         }),
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set(TRACE_HEADER, trace_id);
+    return response;
   } catch (e) {
+    logError(trace_id, "inbox", e);
     const message = e instanceof Error ? e.message : "Internal error";
     return new Response(message, { status: 500 });
   }

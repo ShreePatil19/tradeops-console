@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { model, requireApiKey } from "@/lib/model";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
+import { log, logError } from "@/lib/log";
+import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,11 +23,20 @@ Rules:
 - Do not invent data. If you cannot read a row, omit it. Mention omissions in the anomalies note.`;
 
 export async function POST(req: Request) {
+  const trace_id = readTraceFromHeaders(req.headers);
+  const startTime = Date.now();
   try {
     requireApiKey();
     const { messages }: { messages: UIMessage[] } = await req.json();
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
+
+    const input_chars = messages
+      .flatMap((m) => m.parts)
+      .filter((p) => p.type === "text")
+      .reduce((sum, p) => sum + (p.type === "text" ? p.text.length : 0), 0);
+
+    log({ trace_id, agent: "invoice", event: "request_start", input_chars });
 
     const result = streamText({
       model,
@@ -33,6 +44,7 @@ export async function POST(req: Request) {
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(3),
       onFinish: () => {
+        log({ trace_id, agent: "invoice", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
         Promise.all([bumpRateLimit(ip, "invoice"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */
@@ -70,6 +82,7 @@ export async function POST(req: Request) {
             grandTotal: z.number().nullable(),
           }),
           execute: async (input) => {
+            log({ trace_id, agent: "invoice", event: "tool_call", tool_name: "extract_line_items" });
             const sum = input.lineItems.reduce((s, li) => s + (li.total ?? 0), 0);
             const avgConfidence =
               input.lineItems.length > 0
@@ -87,8 +100,11 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set(TRACE_HEADER, trace_id);
+    return response;
   } catch (e) {
+    logError(trace_id, "invoice", e);
     const message = e instanceof Error ? e.message : "Internal error";
     return new Response(message, { status: 500 });
   }

@@ -4,6 +4,8 @@ import { z } from "zod";
 import { model, requireApiKey } from "@/lib/model";
 import { checkSanctions } from "@/lib/sanctions";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
+import { log, logError } from "@/lib/log";
+import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -27,11 +29,20 @@ Rules:
 - Never say "this counterparty is safe to transact with". The verdict is a pre-check, not a final clearance.`;
 
 export async function POST(req: Request) {
+  const trace_id = readTraceFromHeaders(req.headers);
+  const startTime = Date.now();
   try {
     requireApiKey();
     const { messages }: { messages: UIMessage[] } = await req.json();
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
+
+    const input_chars = messages
+      .flatMap((m) => m.parts)
+      .filter((p) => p.type === "text")
+      .reduce((sum, p) => sum + (p.type === "text" ? p.text.length : 0), 0);
+
+    log({ trace_id, agent: "compliance", event: "request_start", input_chars });
 
     const result = streamText({
       model,
@@ -39,6 +50,7 @@ export async function POST(req: Request) {
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(3),
       onFinish: () => {
+        log({ trace_id, agent: "compliance", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
         Promise.all([
           bumpRateLimit(ip, "compliance"),
           bumpGlobalBudget(),
@@ -54,12 +66,13 @@ export async function POST(req: Request) {
             query: z.string().describe("The counterparty name to screen."),
           }),
           execute: async ({ query }) => {
-            const result = checkSanctions(query);
+            log({ trace_id, agent: "compliance", event: "tool_call", tool_name: "check_sanctions" });
+            const sanctionsResult = checkSanctions(query);
             return {
               query,
-              matched: result.matched,
-              matchCount: result.entries.length,
-              entries: result.entries.map((entry) => ({
+              matched: sanctionsResult.matched,
+              matchCount: sanctionsResult.entries.length,
+              entries: sanctionsResult.entries.map((entry) => ({
                 name: entry.name,
                 aliases: entry.aliases,
                 list: entry.list,
@@ -75,8 +88,11 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set(TRACE_HEADER, trace_id);
+    return response;
   } catch (e) {
+    logError(trace_id, "compliance", e);
     const message = e instanceof Error ? e.message : "Internal error";
     return new Response(message, { status: 500 });
   }

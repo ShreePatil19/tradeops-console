@@ -4,6 +4,8 @@ import { z } from "zod";
 import { model, requireApiKey } from "@/lib/model";
 import { corpus, type CorpusChunk } from "@/lib/corpus";
 import { bumpRateLimit, bumpGlobalBudget } from "@/lib/rate-limit";
+import { log, logError } from "@/lib/log";
+import { readTraceFromHeaders, TRACE_HEADER } from "@/lib/trace";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -45,11 +47,20 @@ Rules:
 - Do not invent chunk IDs that did not appear in the tool result.`;
 
 export async function POST(req: Request) {
+  const trace_id = readTraceFromHeaders(req.headers);
+  const startTime = Date.now();
   try {
     requireApiKey();
     const { messages }: { messages: UIMessage[] } = await req.json();
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
+
+    const input_chars = messages
+      .flatMap((m) => m.parts)
+      .filter((p) => p.type === "text")
+      .reduce((sum, p) => sum + (p.type === "text" ? p.text.length : 0), 0);
+
+    log({ trace_id, agent: "qa", event: "request_start", input_chars });
 
     const result = streamText({
       model,
@@ -57,6 +68,7 @@ export async function POST(req: Request) {
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(3),
       onFinish: () => {
+        log({ trace_id, agent: "qa", event: "request_end", latency_ms: Date.now() - startTime, status: 200 });
         Promise.all([bumpRateLimit(ip, "qa"), bumpGlobalBudget()]).catch(
           () => {
             /* counter loss is acceptable; never fail the user response */
@@ -71,6 +83,7 @@ export async function POST(req: Request) {
             query: z.string().describe("Concise search query derived from the user's question."),
           }),
           execute: async ({ query }) => {
+            log({ trace_id, agent: "qa", event: "tool_call", tool_name: "search_corpus" });
             const hits = topK(query, 4);
             return {
               query,
@@ -88,8 +101,11 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set(TRACE_HEADER, trace_id);
+    return response;
   } catch (e) {
+    logError(trace_id, "qa", e);
     const message = e instanceof Error ? e.message : "Internal error";
     return new Response(message, { status: 500 });
   }
