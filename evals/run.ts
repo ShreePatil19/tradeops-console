@@ -86,10 +86,7 @@ function parseArgs(argv: string[]): {
   return { agent, baseUrl, help };
 }
 
-async function loadSuite(
-  slug: AgentSlug,
-  baseUrl: string | undefined,
-): Promise<AgentSuite> {
+async function loadSuite(slug: AgentSlug): Promise<AgentSuite> {
   const evalsDir = resolve(process.cwd(), 'evals');
 
   const casesPath = resolve(evalsDir, slug, 'cases.json');
@@ -179,7 +176,7 @@ async function main(): Promise<void> {
   let anyFailed = false;
 
   for (const slug of slugs) {
-    const suite = await loadSuite(slug, baseUrl);
+    const suite = await loadSuite(slug);
     const { passed, total } = await runSuite(suite, baseUrl);
 
     const threshold = THRESHOLDS[slug];

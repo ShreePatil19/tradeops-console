@@ -55,20 +55,25 @@ export function QuotaIndicator() {
   }
 
   useEffect(() => {
-    fetchBudget();
+    // Defer the initial fetch out of the synchronous effect body so the
+    // subsequent setState calls do not trigger cascading renders.
+    // (See react-hooks/set-state-in-effect.)
+    const initialTimer = setTimeout(() => {
+      void fetchBudget();
+    }, 0);
 
     function startPolling() {
       if (intervalRef.current) return;
       intervalRef.current = setInterval(() => {
         if (document.visibilityState === "visible") {
-          fetchBudget();
+          void fetchBudget();
         }
       }, 30_000);
     }
 
     function handleVisibility() {
       if (document.visibilityState === "visible") {
-        fetchBudget();
+        void fetchBudget();
         startPolling();
       } else {
         if (intervalRef.current) {
@@ -81,6 +86,7 @@ export function QuotaIndicator() {
     startPolling();
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
+      clearTimeout(initialTimer);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
