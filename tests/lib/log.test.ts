@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { redactString, log, type LogEntry } from "@/lib/log";
 
 // ---------------------------------------------------------------------------
@@ -144,5 +144,49 @@ describe("log PII redaction", () => {
     const out = lastLogArg();
     expect(out.latency_ms).toBe(123);
     expect(out.input_chars).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// log integration with the Axiom sink
+// ---------------------------------------------------------------------------
+
+describe("log Axiom integration", () => {
+  const ORIG_TOKEN = process.env.AXIOM_TOKEN;
+  const ORIG_DATASET = process.env.AXIOM_DATASET;
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    if (ORIG_TOKEN === undefined) delete process.env.AXIOM_TOKEN;
+    else process.env.AXIOM_TOKEN = ORIG_TOKEN;
+    if (ORIG_DATASET === undefined) delete process.env.AXIOM_DATASET;
+    else process.env.AXIOM_DATASET = ORIG_DATASET;
+  });
+
+  it("does not call fetch when AXIOM env vars are absent", async () => {
+    delete process.env.AXIOM_TOKEN;
+    delete process.env.AXIOM_DATASET;
+    log({ trace_id: "t6", event: "noop" });
+    // Allow the lazy import + shipToAxiom microtask to settle.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("calls fetch with the Axiom ingest URL when both env vars are set", async () => {
+    process.env.AXIOM_TOKEN = "tok";
+    process.env.AXIOM_DATASET = "ds";
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true } as Response);
+    log({ trace_id: "t7", event: "shipped" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(fetchMock).toHaveBeenCalled();
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain("/v1/datasets/ds/ingest");
   });
 });

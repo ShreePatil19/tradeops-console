@@ -41,6 +41,18 @@ OpenTelemetry collector) can be wired in by swapping a single adapter.
 
 | Option | Reason rejected |
 |--------|-----------------|
-| Axiom | Deferred until traffic volume justifies the cost; can drop in via the pluggable adapter. |
-| Logfire (Pydantic) | Same deferral rationale as Axiom; primary SDK is Python, adding friction for a TypeScript project. |
-| OpenTelemetry direct export | Heavyweight setup (collector sidecar or OTLP endpoint) is out of scope for a single-developer v0.2 demo. |
+| Logfire (Pydantic) | Primary SDK is Python; OpenTelemetry-native expects span shape rather than raw JSON events, which would add friction to a TypeScript event-style logger. |
+| OpenTelemetry direct export | Heavyweight setup (collector sidecar or OTLP endpoint) is out of scope for a single-developer demo. |
+| Better Stack (Logtail) | Good UI for live tailing, weaker query language than Axiom. Saved as a future swap-target via the pluggable adapter. |
+
+## Update 2026-05-25: Axiom sink wired in
+
+The pluggable adapter is now populated by `src/lib/axiom.ts`. Behaviour:
+
+- `log()` continues to write a JSON line to stdout (no change). After the stdout write it fires `shipToAxiom(sanitized)` in the background.
+- `shipToAxiom` is a no-op when either `AXIOM_TOKEN` or `AXIOM_DATASET` is missing (typical local dev), so existing local workflows are unchanged.
+- When both env vars are set, each event is shipped via a single `POST https://api.axiom.co/v1/datasets/<dataset>/ingest` with `Authorization: Bearer <token>` and a JSON array body of one event. `_time` defaults to `new Date().toISOString()`.
+- `AXIOM_HOST` overrides the default host (`api.axiom.co`) for regional routing.
+- All network failures (`fetch` rejection, non-2xx response) are swallowed. Log shipping never blocks the user request.
+
+Batching is intentionally not implemented yet. At v0.3 traffic volumes the one-event-per-POST cost is negligible; revisit when monthly call counts exceed Axiom's free-tier ingest budget.
